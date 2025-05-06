@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}แก้ไขหมวดหมู่ - {{ category.name }}{% endblock %}
+
+{% block content %}
+<h1>แก้ไขหมวดหมู่: {{ category.name }}</h1>
+<hr>
+
+{% if error %}
+    <div class="alert alert-danger" role="alert">
+        ข้อผิดพลาด: {{ error }}
+    </div>
+{% endif %}
+
+{# action ชี้ไปที่ POST handler ของ Edit โดยใส่ category_id #}
+<form method="post" action="/ui/categories/edit/{{ category.id }}">
+    <div class="mb-3">
+        <label for="name" class="form-label">ชื่อหมวดหมู่ใหม่ <span class="text-danger">*</span></label>
+        {# เติมค่าเดิม หรือค่าที่กรอกค้างไว้ถ้ามี Error #}
+        <input type="text" class="form-control" id="name" name="name" required
+               value="{{ form_data.name if form_data else category.name }}">
+    </div>
+
+    <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+    <a href="/ui/categories/" class="btn btn-secondary">ยกเลิก</a> {# กลับไปหน้า list #}
+</form>
+{% endblock %}

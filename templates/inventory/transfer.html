@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}โอนย้ายสต็อก - GoFresh StockPro{% endblock %}
+
+{% block content %}
+<h1>โอนย้ายสต็อกสินค้า</h1>
+<hr>
+
+{% if error %}
+    <div class="alert alert-danger" role="alert">
+        ข้อผิดพลาด: {{ error }}
+    </div>
+{% endif %}
+
+<form id="transfer-form" method="post" action="/ui/inventory/transfer/">
+    <div class="row g-3">
+        {# --- เลือกสินค้า --- #}
+        <div class="col-md-6 mb-3">
+            <label for="category_select_transfer" class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
+            <select class="form-select" id="category_select_transfer" name="category_select" required>
+                <option value="">-- เลือกหมวดหมู่ก่อน --</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="product_select_transfer" class="form-label">สินค้า <span class="text-danger">*</span></label>
+            <select class="form-select" id="product_select_transfer" name="product_select_display" required disabled>
+                <option value="">-- เลือกหมวดหมู่ก่อน --</option>
+            </select>
+            <input type="hidden" id="product_id" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
+        </div>
+
+        {# --- เลือกสถานที่ --- #}
+        <div class="col-md-6 mb-3">
+            <label for="from_location_id" class="form-label">จากสถานที่ <span class="text-danger">*</span></label>
+            <select class="form-select" id="from_location_id" name="from_location_id" required>
+                <option value="">-- เลือกสถานที่ต้นทาง --</option>
+                {% for location in locations %}
+                    <option value="{{ location.id }}"
+                            {% if form_data and form_data.from_location_id|int == location.id %}selected{% endif %}>
+                        {{ location.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+         <div class="col-md-6 mb-3">
+            <label for="to_location_id" class="form-label">ไปสถานที่ <span class="text-danger">*</span></label>
+            <select class="form-select" id="to_location_id" name="to_location_id" required>
+                <option value="">-- เลือกสถานที่ปลายทาง --</option>
+                 {% for location in locations %}
+                    <option value="{{ location.id }}"
+                            {% if form_data and form_data.to_location_id|int == location.id %}selected{% endif %}>
+                        {{ location.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# --- จำนวนและหมายเหตุ --- #}
+        <div class="col-md-6 mb-3">
+            <label for="quantity" class="form-label">จำนวนที่โอนย้าย <span class="text-danger">*</span></label>
+            <input type="number" min="1" step="1" class="form-control" id="quantity" name="quantity" required
+                   value="{{ form_data.quantity if form_data else '' }}">
+        </div>
+         <div class="col-12 mb-3">
+            <label for="notes" class="form-label">หมายเหตุ</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2">{{ form_data.notes if form_data else '' }}</textarea>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-info">บันทึกการโอนย้าย</button> {# ใช้สีฟ้าสำหรับ Transfer #}
+    <a href="/ui/inventory/summary/" class="btn btn-secondary">ยกเลิก</a>
+</form>
+{% endblock %}
+
+{# --- JavaScript สำหรับ Cascading Dropdown และเช็ค Location ซ้ำ --- #}
+{% block scripts_extra %}
+<script>
+    const categorySelect = document.getElementById('category_select_transfer');
+    const productSelect = document.getElementById('product_select_transfer');
+    const productIdInput = document.getElementById('product_id');
+    const fromLocationSelect = document.getElementById('from_location_id');
+    const toLocationSelect = document.getElementById('to_location_id');
+    const transferForm = document.getElementById('transfer-form');
+
+    // Cascading Dropdown Logic
+    categorySelect.addEventListener('change', async function() {
+        const categoryId = this.value;
+        productSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+        productSelect.disabled = true;
+        productIdInput.value = '';
+        if (categoryId) {
+            try {
+                const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const products = await response.json();
+                productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
+                if (products.length > 0) {
+                    products.forEach(product => {
+                        const option = document.createElement('option');
+                        option.value = product.id;
+                        option.textContent = `${product.name} (SKU: ${product.sku})`;
+                        productSelect.appendChild(option);
+                    });
+                     productSelect.disabled = false;
+                } else { productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>'; }
+            } catch (error) { console.error('Error fetching products:', error); productSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>'; }
+        } else { productSelect.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>'; }
+    });
+    productSelect.addEventListener('change', function() { productIdInput.value = this.value; });
+
+    // Location Validation
+    function validateLocations() {
+        if (fromLocationSelect.value && toLocationSelect.value && fromLocationSelect.value === toLocationSelect.value) {
+            toLocationSelect.setCustomValidity("สถานที่ต้นทางและปลายทางต้องแตกต่างกัน");
+            toLocationSelect.reportValidity();
+            return false;
+        } else {
+             toLocationSelect.setCustomValidity("");
+             return true;
+        }
+    }
+    fromLocationSelect.addEventListener('change', validateLocations);
+    toLocationSelect.addEventListener('change', validateLocations);
+
+    // Form Submit Validation
+    transferForm.addEventListener('submit', function(event){
+        if (!validateLocations()) {
+             event.preventDefault();
+             alert("สถานที่จัดเก็บต้นทางและปลายทางต้องแตกต่างกัน");
+        }
+        if (!productIdInput.value) { // เช็คว่าเลือก Product หรือยัง
+            alert("กรุณาเลือกสินค้าที่ต้องการโอนย้าย");
+            event.preventDefault();
+        }
+    });
+
+</script>
+{% endblock %}

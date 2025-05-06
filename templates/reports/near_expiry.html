@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}รายงานสินค้าใกล้หมดอายุ - GoFresh StockPro{% endblock %}
+
+{% block content %}
+<h1>รายงานสินค้าใกล้หมดอายุ</h1>
+<p class="text-muted">แสดงรายการรับเข้า (Stock In) ที่มีวันหมดอายุภายใน {{ days_ahead }} วันข้างหน้า</p>
+<div class="alert alert-warning small" role="alert">
+  <strong>หมายเหตุ:</strong> รายงานนี้แสดงตามข้อมูล 'วันหมดอายุ' ที่บันทึกไว้ตอนรับสินค้าเข้า และ 'จำนวนที่รับเข้า' ของล็อตนั้นๆ ไม่ได้หมายความว่าสินค้านี้ยังคงเหลือตามจำนวนดังกล่าวในสต็อกปัจจุบันทั้งหมด กรุณาตรวจสอบยอดคงคลังจริงประกอบ
+</div>
+<hr>
+
+
+{# --- ฟอร์มกรองตามจำนวนวัน (เหมือนเดิม) --- #}
+<form method="get" action="/ui/inventory/near-expiry/" class="row g-3 align-items-end mb-4">
+    <div class="col-md-4">
+        <label for="days_ahead" class="form-label">หมดอายุภายใน (วัน)</label>
+        <input type="number" min="1" class="form-control form-control-sm" id="days_ahead" name="days_ahead" value="{{ days_ahead }}">
+    </div>
+    <div class="col-md-auto">
+        <button type="submit" class="btn btn-primary btn-sm">ดูรายงาน</button>
+        <a href="/ui/inventory/near-expiry/" class="btn btn-secondary btn-sm">ค่าเริ่มต้น (30 วัน)</a>
+    </div>
+</form>
+
+{# --- แก้ไข: แสดงจำนวนข้อมูล + หน้าปัจจุบัน --- #}
+{% if total_count > 0 %}
+<p>พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p>
+{% endif %}
+
+
+{# --- ตารางแสดงผล --- #}
+{% if transactions %} {# <-- ใช้ transactions #}
+<div class="table-responsive">
+    <table class="table table-sm table-striped table-hover">
+        <thead class="table-light">
+             <tr>
+                <th>สินค้า</th>
+                <th>SKU</th>
+                <th>หมวดหมู่</th>
+                <th>สถานที่จัดเก็บ</th>
+                <th class="text-end">จำนวนรับเข้า</th>
+                <th>วันหมดอายุ</th>
+                <th>ต้นทุน/หน่วย (ถ้ามี)</th>
+                <th>หมายเหตุรับเข้า</th>
+                <th>วันที่รับเข้า</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tx in transactions %} {# <-- วนลูป transactions #}
+            <tr {% if tx.expiry_date <= today + timedelta(days=7) %}class="table-danger"{% elif tx.expiry_date <= today + timedelta(days=14) %}class="table-warning"{% endif %} >
+                <td>{{ tx.product.name if tx.product else 'N/A' }}</td>
+                <td>{{ tx.product.sku if tx.product else 'N/A' }}</td>
+                <td>{{ tx.product.category.name if tx.product and tx.product.category else 'N/A' }}</td>
+                <td>{{ tx.location.name if tx.location else 'N/A' }}</td>
+                <td class="text-end">{{ tx.quantity_change }}</td>
+                <td>{{ tx.expiry_date.strftime('%Y-%m-%d') if tx.expiry_date else '-' }}</td>
+                <td class="text-end">{{ "%.2f"|format(tx.cost_per_unit) if tx.cost_per_unit else '-' }}</td>
+                <td>{{ tx.notes if tx.notes else '-' }}</td>
+                <td>{{ tx.transaction_date.strftime('%Y-%m-%d %H:%M') if tx.transaction_date else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted mt-3">ไม่พบรายการรับเข้าที่ใกล้หมดอายุภายใน {{ days_ahead }} วันข้างหน้า</p>
+{% endif %}
+
+{# --- เพิ่ม: Include Pagination Template --- #}
+<div class="mt-4 d-flex justify-content-center">
+    {% include '_pagination.html' %}
+</div>
+{# ------------------------------------ #}
+
+{% endblock %}

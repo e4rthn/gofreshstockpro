@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}รอบนับสต็อก #{{ session.id }} - {{ session.location.name }}{% endblock %}
+
+{% block content %}
+
+{# ---- ส่วนแสดง Message ---- #}
+{% set message = request.query_params.get('message') %}
+{% if message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+{% set error = request.query_params.get('error') %}
+{% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ข้อผิดพลาด: {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+{# ------------------------ #}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+     <h1>รอบนับสต็อก #{{ session.id }}</h1>
+     <a href="{{ url_for('ui_list_stock_count_sessions') }}" class="btn btn-secondary btn-sm">กลับไปรายการรอบนับ</a> {# ใช้ url_for #}
+</div>
+
+{# --- แสดงข้อมูล Session --- #}
+<div class="card mb-4">
+    <div class="card-header">
+        ข้อมูลรอบนับ
+    </div>
+    <div class="card-body">
+         <p><strong>สถานที่:</strong> {{ session.location.name if session.location else 'N/A' }}</p>
+         <p><strong>วันที่เริ่ม:</strong> {{ session.start_date.strftime('%Y-%m-%d %H:%M') if session.start_date else '-'}}</p>
+         <p><strong>วันที่สิ้นสุด/ยกเลิก:</strong> {{ session.end_date.strftime('%Y-%m-%d %H:%M') if session.end_date else '-'}}</p> {# เปลี่ยน Label #}
+         <p><strong>สถานะ:</strong>
+              <span class="badge {% if session.status.value == 'OPEN' %} bg-secondary {% elif session.status.value == 'COUNTING' %} bg-info text-dark {% elif session.status.value == 'CLOSED' %} bg-success {% elif session.status.value == 'CANCELED' %} bg-danger {% else %} bg-light text-dark {% endif %}">
+                     {{ session.status.value }}
+              </span>
+         </p>
+         <p><strong>หมายเหตุ:</strong> {{ session.notes if session.notes else '-' }}</p>
+         {# --- ปุ่ม Actions สำหรับ Session --- #}
+         <div class="mt-2 d-flex gap-2 flex-wrap"> {# เพิ่ม flex-wrap #}
+             {# ปุ่มเริ่มนับ (แสดงเมื่อสถานะ OPEN) #}
+             {% if session.status.value == 'OPEN' %}
+             <form method="post" action="{{ url_for('ui_start_counting_session', session_id=session.id) }}"> {# ใช้ url_for #}
+                 <button type="submit" class="btn btn-warning btn-sm">เริ่มดำเนินการนับ</button>
+             </form>
+             {% endif %}
+
+             {# ปุ่มปิดรอบนับ (แสดงเมื่อสถานะ COUNTING) #}
+             {% if session.status.value == 'COUNTING' %}
+             <form method="post" action="{{ url_for('ui_handle_close_session', session_id=session.id) }}" {# ใช้ url_for #}
+                   onsubmit="return confirm('ยืนยันการปิดรอบนับ? ระบบจะสร้างรายการปรับปรุงสต็อกอัตโนมัติสำหรับส่วนต่าง และไม่สามารถแก้ไขรอบนับนี้ได้อีก');">
+                 <button type="submit" class="btn btn-success btn-sm">ปิดรอบนับ / สร้าง Adjustment</button>
+             </form>
+             {% endif %}
+
+             {# --- เพิ่มปุ่ม ยกเลิก (แสดงเมื่อสถานะ OPEN หรือ COUNTING) --- #}
+             {% if session.status.value == 'OPEN' or session.status.value == 'COUNTING' %}
+                <form method="post" action="{{ url_for('ui_handle_cancel_session', session_id=session.id) }}" {# ใช้ url_for ชี้ไป route ใหม่ #}
+                      onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกรอบนับสต็อกนี้? การยกเลิกจะไม่สามารถย้อนกลับได้');">
+                     <button type="submit" class="btn btn-danger btn-sm">ยกเลิกรอบนับ</button>
+                </form>
+             {% endif %}
+             {# --------------------------------------------------------- #}
+         </div>
+    </div>
+</div>
+
+{# --- ส่วนเพิ่มสินค้าเข้ารอบนับ (แสดงเมื่อสถานะ OPEN หรือ COUNTING) --- #}
+{% if session.status.value == 'OPEN' or session.status.value == 'COUNTING' %} {# แก้ไขเงื่อนไขนี้ด้วย #}
+<div class="card mb-4">
+     <div class="card-header">เพิ่มสินค้าเข้ารอบนับ</div>
+     <div class="card-body">
+         <form id="add-item-form" method="post" action="{{ url_for('ui_handle_add_item_to_session', session_id=session.id) }}" class="row g-2 align-items-end"> {# ใช้ url_for #}
+             <div class="col-md-4"> <label for="category_select_count" class="form-label">หมวดหมู่</label> <select class="form-select form-select-sm" id="category_select_count"> <option value="">-- เลือกหมวดหมู่ --</option> {% for category in categories %} <option value="{{ category.id }}">{{ category.name }}</option> {% endfor %} </select> </div>
+             <div class="col-md-6"> <label for="product_select_count" class="form-label">สินค้า</label> <select class="form-select form-select-sm" id="product_select_count" name="product_id" required disabled> <option value="">-- เลือกหมวดหมู่ก่อน --</option> </select> </div>
+             <div class="col-md-2"> <button type="submit" class="btn btn-primary btn-sm w-100">เพิ่มสินค้า</button> </div>
+         </form>
+     </div>
+ </div>
+ {% endif %}
+
+{# --- ตารางรายการสินค้าในรอบนับ (ใส่ form ครอบสำหรับ update counts) --- #}
+<form id="count-form" method="post" action="{{ url_for('ui_handle_update_counts', session_id=session.id) }}"> {# ใช้ url_for #}
+    <h5>รายการสินค้าในรอบนับนี้</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>สินค้า (SKU)</th>
+                    <th class="text-end">ยอดในระบบ</th>
+                    <th class="text-center" style="min-width: 120px;">ยอดนับจริง</th>
+                    <th class="text-end">ส่วนต่าง</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if session.items %}
+                    {% for item in session.items %}
+                    <tr>
+                        <td>{{ item.product.name if item.product else 'N/A' }} ({{ item.product.sku if item.product else 'N/A' }})</td>
+                        <td class="text-end">{{ item.system_quantity }}</td>
+                        <td>
+                           <input type="number" min="0" step="1" class="form-control form-control-sm text-end"
+                                  name="count_for_{{ item.id }}"
+                                  value="{{ item.counted_quantity if item.counted_quantity is not none else '' }}"
+                                  placeholder="กรอกยอดนับ"
+                                  {# Disable ถ้าไม่ใช่ COUNTING เท่านั้น #}
+                                  {% if session.status.value != 'COUNTING' %}disabled{% endif %}>
+                        </td>
+                        <td class="text-end
+                           {% if item.difference is not none and item.difference > 0 %} text-success
+                           {% elif item.difference is not none and item.difference < 0 %} text-danger
+                           {% endif %}">
+                           {{ "{:+}".format(item.difference) if item.difference is not none else '-' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                 {% else %}
+                     <tr> <td colspan="4" class="text-center text-muted">ยังไม่มีสินค้าในรอบนับนี้</td> </tr>
+                 {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {# ปุ่มบันทึกยอดนับทั้งหมด (แสดงเมื่อสถานะ COUNTING และมี items) #}
+    {% if session.status.value == 'COUNTING' and session.items %}
+         <button type="submit" class="btn btn-primary mt-3">บันทึกยอดนับทั้งหมด</button>
+    {% endif %}
+</form>
+
+{% endblock %}
+
+{# JavaScript เดิมสำหรับ Cascading Dropdown ไม่ต้องแก้ไข #}
+{% block scripts_extra %}
+<script>
+    const categorySelectCount = document.getElementById('category_select_count');
+    const productSelectCount = document.getElementById('product_select_count');
+    if(categorySelectCount && productSelectCount){
+        categorySelectCount.addEventListener('change', async function() {
+            const categoryId = this.value;
+            productSelectCount.innerHTML = '<option value="">กำลังโหลด...</option>';
+            productSelectCount.disabled = true;
+            if (categoryId) {
+                try {
+                    const response = await fetch(`/api/products/by-category/${categoryId}/basic`); // ใช้ API path ตรงๆ
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const products = await response.json();
+                    productSelectCount.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
+                    if (products.length > 0) {
+                        products.forEach(product => {
+                            const option = document.createElement('option');
+                            option.value = product.id;
+                            option.textContent = `${product.name} (SKU: ${product.sku})`;
+                            productSelectCount.appendChild(option);
+                        });
+                         productSelectCount.disabled = false;
+                    } else { productSelectCount.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>'; }
+                } catch (error) { console.error('Error fetching products:', error); productSelectCount.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>'; }
+            } else { productSelectCount.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>'; }
+        });
+    }
+</script>
+{% endblock %}
