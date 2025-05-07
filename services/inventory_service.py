@@ -12,9 +12,8 @@ import schemas
 from schemas.inventory import StockInSchema, StockAdjustmentSchema, StockTransferSchema
 from schemas.stock_count import StockCountItemUpdate
 import models
-from models import InventoryTransaction, CurrentStock
 # Absolute Imports for other services
-from services import product_service, location_service # location_service is used implicitly or explicitly
+from services import product_service, location_service
 
 def get_current_stock_record(db: Session, product_id: int, location_id: int) -> Optional[CurrentStock]:
     return db.query(CurrentStock).filter(
@@ -63,7 +62,6 @@ def get_current_stock_summary(db: Session,
 
     # Apply filters first
     if category_id is not None:
-        # Ensure Product is joined if filtering by its category_id
         query = query.join(Product, CurrentStock.product_id == Product.id).filter(Product.category_id == category_id)
 
     if location_id is not None:
@@ -74,29 +72,32 @@ def get_current_stock_summary(db: Session,
     # Define order expressions
     order_expressions = []
 
-    # If viewing all locations, order by location name, then product name
+    # If viewing all locations (location_id is None), order by location name, then product name
     if location_id is None:
-        # To order by Location.name, we need to ensure Location is joined
-        # The joinedload for CurrentStock.location helps with data loading,
-        # but for ordering, an explicit join in the query path is robust.
-        if not any(jc.mapper.class_ == Location for jc in getattr(query, '_join_entities', [])): # Heuristic check
-             query = query.join(Location, CurrentStock.location_id == Location.id)
-        order_expressions.append(Location.name)
+        # Ensure Location is joined to order by Location.name
+        # A simple way to check if a join path is already present is harder with SQLAlchemy's internals.
+        # It's often safer to explicitly join if ordering by a related table's column.
+        # SQLAlchemy is usually smart about not creating truly redundant joins.
+        query = query.join(Location, CurrentStock.location_id == Location.id)
+        order_expressions.append(Location.name) # Order by location name
     
     # Then, order by product name.
     # Ensure Product is joined if not already by category_id filter.
-    if not category_id: # If Product wasn't joined by category filter
-        if not any(jc.mapper.class_ == Product for jc in getattr(query, '_join_entities', [])): # Heuristic check
+    if not category_id : # If Product wasn't necessarily joined by category filter
+        # Check if Product is already part of the query (e.g. if joinedload makes it available for order_by path)
+        # For robustness, explicitly join if ordering by Product.name
+        # This checks if 'product' (the relationship attribute on CurrentStock) implies Product model.
+        # A more direct way if 'Product' model itself isn't directly in query._entities before this.
+        if not any(jc.mapper.class_ == Product for jc in getattr(query, '_join_entities', [])):
              query = query.join(Product, CurrentStock.product_id == Product.id)
-    order_expressions.append(Product.name)
+    order_expressions.append(Product.name) # Order by product name
 
     stock_data = query.order_by(*order_expressions).offset(skip).limit(limit).all()
     return {"items": stock_data, "total_count": total_count}
 
 
-# ... (ส่วนที่เหลือของ record_stock_adjustment, record_stock_deduction, get_near_expiry_transactions, record_stock_transfer, และ stock count functions ให้เหมือนเดิมกับเวอร์ชันล่าสุดที่คุณมีและทำงานได้ดี) ...
-# (Ensure the rest of the functions are complete and correct as per your working version)
-
+# --- (ส่วนที่เหลือของ inventory_service.py เช่น record_stock_adjustment, record_stock_deduction, etc. ให้คงเดิมตามที่คุณมีและทำงานได้ดีแล้ว) ---
+# ... (rest of your inventory_service.py file)
 def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema, allow_negative_stock_for_count: bool = False) -> InventoryTransaction:
     if adjustment_data.quantity_change == 0:
         raise ValueError("จำนวนที่เปลี่ยนแปลงต้องไม่เป็นศูนย์")
@@ -119,9 +120,9 @@ def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema,
                         f"สต็อกไม่เพียงพอสำหรับการปรับลด ปัจจุบัน: {current_quantity_on_hand}, "
                         f"ต้องการลด: {abs(adjustment_data.quantity_change)} ที่ {location.name} สำหรับ '{product.name}'"
                     )
-        
+
         transaction_type = TransactionType.ADJUSTMENT_ADD if adjustment_data.quantity_change > 0 else TransactionType.ADJUSTMENT_SUB
-        
+
         transaction_notes = f"เหตุผล: {adjustment_data.reason}" if adjustment_data.reason else "ปรับปรุงสต็อก"
         if adjustment_data.notes:
             transaction_notes += f"; หมายเหตุ: {adjustment_data.notes}"
@@ -147,12 +148,12 @@ def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema,
                 db.add(current_stock)
             else:
                 raise ValueError("ไม่สามารถปรับปรุงยอดติดลบสำหรับสต็อกที่ยังไม่มีได้ (ยกเว้นกรณีมาจากการนับสต็อก)")
-        
+
         db.commit()
         db.refresh(transaction)
         if current_stock:
             db.refresh(current_stock)
-            
+
     except Exception as e:
         db.rollback()
         print(f"Error during stock adjustment: {type(e).__name__} - {e}")
@@ -164,22 +165,23 @@ def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema,
 
 def record_stock_deduction(
     db: Session,
-    transaction_type: models.TransactionType,
+    transaction_type: TransactionType, # <<--- แก้ไข: ใช้ TransactionType โดยตรง (ไม่ต้องมี models.)
     product_id: int,
     location_id: int,
     quantity: int,
     related_transaction_id: Optional[int] = None,
     notes: Optional[str] = None,
     cost_per_unit: Optional[float] = None
-) -> models.InventoryTransaction:
+) -> InventoryTransaction: # <<--- แก้ไข: ใช้ InventoryTransaction โดยตรง
     if quantity <= 0:
         raise ValueError("Quantity for stock deduction must be a positive value.")
 
-    product = product_service.get_product(db, product_id=product_id)
-    if not product:
-        raise ValueError(f"Product ID {product_id} not found for stock deduction.")
+    # product = product_service.get_product(db, product_id=product_id) # การตรวจสอบนี้อาจจะทำแล้วใน service ที่เรียก
+    # if not product:
+    #     raise ValueError(f"Product ID {product_id} not found for stock deduction.")
 
-    transaction = models.InventoryTransaction(
+    # สร้าง InventoryTransaction instance
+    transaction = InventoryTransaction( # <<--- แก้ไข: ใช้ InventoryTransaction โดยตรง
         transaction_type=transaction_type,
         product_id=product_id,
         location_id=location_id,
@@ -194,12 +196,14 @@ def record_stock_deduction(
     if current_stock_record:
         current_stock_record.quantity -= abs(quantity)
     else:
-        current_stock_record = models.CurrentStock(
+        # ถ้ายังไม่มี CurrentStock record, สร้างใหม่ (สต็อกจะเริ่มจากค่าติดลบนี้)
+        current_stock_record = CurrentStock( # <<--- แก้ไข: ใช้ CurrentStock โดยตรง
             product_id=product_id,
             location_id=location_id,
             quantity = -abs(quantity)
         )
         db.add(current_stock_record)
+    # การ commit จะถูกจัดการโดยฟังก์ชันที่เรียกใช้ (เช่น record_sale)
     return transaction
 
 def get_near_expiry_transactions(
@@ -224,16 +228,16 @@ def record_stock_transfer(
     db: Session, transfer_data: StockTransferSchema
 ) -> Tuple[InventoryTransaction, InventoryTransaction]:
     if transfer_data.quantity <= 0: raise ValueError("จำนวนที่โอนย้ายต้องมากกว่าศูนย์")
-    
+
     product = product_service.get_product(db, product_id=transfer_data.product_id)
     if not product: raise ValueError(f"ไม่พบสินค้า รหัส {transfer_data.product_id}")
-    
+
     from_location = location_service.get_location(db, location_id=transfer_data.from_location_id)
     if not from_location: raise ValueError(f"ไม่พบสถานที่จัดเก็บต้นทาง รหัส {transfer_data.from_location_id}")
-    
+
     to_location = location_service.get_location(db, location_id=transfer_data.to_location_id)
     if not to_location: raise ValueError(f"ไม่พบสถานที่จัดเก็บปลายทาง รหัส {transfer_data.to_location_id}")
-    
+
     if transfer_data.from_location_id == transfer_data.to_location_id:
         raise ValueError("สถานที่จัดเก็บต้นทางและปลายทางต้องแตกต่างกัน")
 
@@ -242,7 +246,7 @@ def record_stock_transfer(
     try:
         from_stock = get_current_stock_record(db, product_id=transfer_data.product_id, location_id=transfer_data.from_location_id)
         to_stock = get_current_stock_record(db, product_id=transfer_data.product_id, location_id=transfer_data.to_location_id)
-        
+
         from_quantity_on_hand = from_stock.quantity if from_stock else 0
         if from_quantity_on_hand < transfer_data.quantity:
             raise ValueError(
@@ -255,7 +259,7 @@ def record_stock_transfer(
         if transfer_data.notes:
             notes_out_detail += f"; หมายเหตุ: {transfer_data.notes}"
             notes_in_detail += f"; หมายเหตุ: {transfer_data.notes}"
-        
+
         cost_for_transfer_tx = product.standard_cost
 
         tx_out = InventoryTransaction(
@@ -276,7 +280,7 @@ def record_stock_transfer(
 
         if from_stock:
             from_stock.quantity -= abs(transfer_data.quantity)
-        
+
         if to_stock:
             to_stock.quantity += abs(transfer_data.quantity)
         else:
@@ -286,7 +290,7 @@ def record_stock_transfer(
                 quantity=abs(transfer_data.quantity)
             )
             db.add(to_stock)
-        
+
         db.commit()
         db.refresh(tx_out); db.refresh(tx_in)
         if from_stock: db.refresh(from_stock)
@@ -299,10 +303,10 @@ def record_stock_transfer(
             raise e
         else:
             raise ValueError(f"เกิดข้อผิดพลาดในระบบขณะโอนย้ายสต็อก: {str(e)}") from e
-    
+
     if tx_out is None or tx_in is None:
         raise RuntimeError("Failed to create transfer transactions.")
-        
+
     return tx_out, tx_in
 
 def update_counted_quantity(db: Session, item_id: int, item_update_data: StockCountItemUpdate) -> StockCountItem:
@@ -339,7 +343,7 @@ def start_counting_session(db: Session, session_id: int) -> StockCountSession:
         raise ValueError(f"ไม่พบรอบนับสต็อก รหัส {session_id}")
     if session.status != StockCountStatus.OPEN:
         raise ValueError(f"รอบนับนี้ไม่ได้อยู่ในสถานะ OPEN (สถานะปัจจุบัน: {session.status.value})")
-    
+
     session.status = StockCountStatus.COUNTING
     try:
         db.commit()
@@ -370,7 +374,7 @@ def close_stock_count_session(db: Session, session_id: int) -> StockCountSession
     try:
         adjustments_created_count = 0
         for item in items_in_session:
-            difference = item.difference 
+            difference = item.difference
             if difference is not None and difference != 0:
                 adjustment_data_schema = schemas.StockAdjustmentSchema(
                     product_id=item.product_id,
@@ -385,10 +389,10 @@ def close_stock_count_session(db: Session, session_id: int) -> StockCountSession
                 )
                 record_stock_adjustment(db=db, adjustment_data=adjustment_data_schema, allow_negative_stock_for_count=True)
                 adjustments_created_count += 1
-        
+
         session.status = StockCountStatus.CLOSED
         session.end_date = datetime.utcnow()
-        
+
         db.commit()
     except Exception as e:
         db.rollback()
@@ -397,7 +401,7 @@ def close_stock_count_session(db: Session, session_id: int) -> StockCountSession
             raise e
         else:
             raise ValueError(f"เกิดข้อผิดพลาดในระบบขณะปิดรอบนับสต็อก: {str(e)}") from e
-            
+
     db.refresh(session)
     print(f"Stock Count Session {session_id} closed. {adjustments_created_count} adjustments created.")
     return session
@@ -410,7 +414,7 @@ def cancel_stock_count_session(db: Session, session_id: int) -> StockCountSessio
         raise ValueError(
             f"ไม่สามารถยกเลิกรอบนับที่สถานะ '{session.status.value}' ได้ (ต้องเป็น OPEN หรือ COUNTING)"
         )
-    
+
     session.status = StockCountStatus.CANCELED
     session.end_date = datetime.utcnow()
     try:
@@ -419,6 +423,6 @@ def cancel_stock_count_session(db: Session, session_id: int) -> StockCountSessio
     except Exception as e:
         db.rollback()
         raise ValueError(f"DB error canceling session {session_id}: {str(e)}") from e
-        
+
     print(f"Stock Count Session {session_id} canceled.")
     return session

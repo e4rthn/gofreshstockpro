@@ -7,15 +7,17 @@
 <style>
     .stock-low { color: orange; font-weight: bold; }
     .stock-negative { color: red; font-weight: bold; }
-    /* Ensure DataTable controls are well-spaced and visible */
     div.dataTables_wrapper div.dataTables_length select,
     div.dataTables_wrapper div.dataTables_filter input {
-        width: auto;
-        display: inline-block;
-        margin-left: 0.5em; /* For filter input */
+        width: auto; display: inline-block; margin-left: 0.5em;
     }
-    .form-label { margin-bottom: 0.25rem; } /* Reduce bottom margin for labels in filter form */
-    .filter-form-section { margin-bottom: 1rem; } /* Add some bottom margin to filter sections */
+    .filter-form-section { margin-bottom: 0.5rem; } /* Reduced bottom margin */
+    .nav-pills .nav-link {
+        padding: 0.35rem 0.7rem; /* Smaller padding for pills */
+        font-size: 0.875rem; /* Smaller font size */
+    }
+    .form-select-sm { font-size: 0.875rem; padding-top: 0.25rem; padding-bottom: 0.25rem;} /* Adjust select size */
+    .btn-sm { font-size: 0.875rem; padding: 0.25rem 0.5rem; }
 </style>
 {% endblock %}
 
@@ -23,60 +25,70 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>สรุปสต็อกคงคลัง {% if selected_location_id %}- {% for loc in all_locations %}{% if loc.id == selected_location_id %}{{ loc.name }}{% endif %}{% endfor %}{% elif not selected_location_id and all_locations|length > 1 %} (ทุกสถานที่){% endif %}</h1>
     <div>
-        <a href="{{ request.app.url_path_for('ui_show_adjustment_form') }}" class="btn btn-warning"><i class="bi bi-pencil-square me-1"></i>ปรับปรุงสต็อก</a>
-        <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}" class="btn btn-success"><i class="bi bi-plus-circle-fill me-1"></i>รับสินค้าเข้า</a>
+        <a href="{{ request.app.url_path_for('ui_show_adjustment_form') }}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square me-1"></i>ปรับปรุงสต็อก</a>
+        <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle-fill me-1"></i>รับสินค้าเข้า</a>
     </div>
 </div>
 
 {% if message %}
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+    <div class="alert alert-success alert-dismissible fade show" role="alert"> {{ message }} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> </div>
 {% endif %}
 {% if error %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        ข้อผิดพลาด: {{ error }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert"> ข้อผิดพลาด: {{ error }} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> </div>
 {% endif %}
 
 {# --- ฟอร์มกรอง --- #}
-<form method="get" action="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="mb-4 p-3 border rounded bg-light">
-    <div class="row g-3 align-items-end">
+<div class="mb-4 p-3 border rounded bg-light">
+    <div class="row g-2 align-items-end"> {# g-2 for smaller gutters #}
         {% if all_locations|length > 1 %}
-        <div class="col-md-4 filter-form-section">
-            <label for="location_filter" class="form-label">เลือกสถานที่จัดเก็บ:</label>
-            <select class="form-select form-select-sm" id="location_filter" name="location" onchange="this.form.submit()">
-                <option value="">-- ทุกสถานที่ --</option>
+        <div class="col-md-auto filter-form-section"> {# col-md-auto to fit content #}
+            <label class="form-label d-block mb-1">เลือกสถานที่:</label>
+            <ul class="nav nav-pills nav-pills-secondary flex-wrap">
+                <li class="nav-item me-1 mb-1">
+                    <a class="nav-link {% if not selected_location_id %}active{% endif %}"
+                       href="{{ create_filter_link(location=None, category=selected_category_id, limit=limit) }}">
+                        ทุกสถานที่
+                    </a>
+                </li>
                 {% for loc in all_locations %}
-                    <option value="{{ loc.id }}" {% if selected_location_id and selected_location_id|string == loc.id|string %}selected{% endif %}>
+                <li class="nav-item me-1 mb-1">
+                    <a class="nav-link {% if selected_location_id and selected_location_id|string == loc.id|string %}active{% endif %}"
+                       href="{{ create_filter_link(location=loc.id, category=selected_category_id, limit=limit) }}">
                         {{ loc.name }}
-                    </option>
+                    </a>
+                </li>
                 {% endfor %}
-            </select>
+            </ul>
         </div>
         {% elif all_locations|length == 1 and not selected_location_id %}
-             <input type="hidden" name="location" value="{{ all_locations[0].id }}">
+             {# If only one location, it's implicitly selected if no filter is active.
+                The backend will handle location_id=None as 'all' or the single one if logic implies.
+                Or, to always filter by the single one:
+                <input type="hidden" name="location" value="{{ all_locations[0].id }}">
+             #}
         {% endif %}
 
-        <div class="col-md-4 filter-form-section">
-            <label for="category_filter" class="form-label">กรองตามหมวดหมู่:</label>
-            <select class="form-select form-select-sm" id="category_filter" name="category" onchange="this.form.submit()">
-                <option value="">-- ทุกหมวดหมู่ --</option>
-                {% for cat in all_categories %}
-                    <option value="{{ cat.id }}" {% if selected_category_id and selected_category_id|string == cat.id|string %}selected{% endif %}>
-                        {{ cat.name }}
-                    </option>
-                {% endfor %}
-            </select>
+        <div class="col-md-3 filter-form-section"> {# Adjust width as needed #}
+            <label for="category_filter" class="form-label mb-1">หมวดหมู่:</label>
+            <form id="categoryFilterForm" method="get" action="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="d-flex">
+                <input type="hidden" name="location" value="{{ selected_location_id if selected_location_id else '' }}">
+                <input type="hidden" name="limit" value="{{ limit }}">
+                <input type="hidden" name="page" value="1"> {# Always reset to page 1 on category change #}
+                <select class="form-select form-select-sm" id="category_filter" name="category" onchange="this.form.submit()">
+                    <option value="">-- ทุกหมวดหมู่ --</option>
+                    {% for cat in all_categories %}
+                        <option value="{{ cat.id }}" {% if selected_category_id and selected_category_id|string == cat.id|string %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
         </div>
-        <input type="hidden" name="limit" value="{{ limit }}">
         <div class="col-md-auto filter-form-section d-flex align-items-end">
-            <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="btn btn-outline-secondary btn-sm">ล้างค่ากรองทั้งหมด</a>
+            <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}?limit={{limit}}" class="btn btn-outline-secondary btn-sm">ล้างค่ากรอง</a>
         </div>
     </div>
-</form>
+</div>
 {# --------------------------------- #}
 
 {% if total_count > 0 %}
@@ -89,7 +101,6 @@
 {% elif selected_location_id or selected_category_id %}
 <p class="text-muted mt-3">ไม่พบข้อมูลสต็อกตามเงื่อนไขที่เลือก</p>
 {% else %}
-{# No filters selected, and no data at all #}
 {% endif %}
 
 {% if stock_summary %}
@@ -114,7 +125,7 @@
                 <td>{{ item.location.name if item.location else 'N/A' }}</td>
                 {% endif %}
                 <td>
-                    <a href="{{ request.app.url_path_for('ui_show_edit_product_form', product_id=item.product.id) if item.product else '#' }}" title="แก้ไขรายละเอียดสินค้า">
+                    <a href="{{ request.app.url_path_for('ui_show_edit_product_form', product_id=item.product.id) if item.product else '#' }}" title="แก้ไขรายละเอียดสินค้า {{ item.product.name if item.product }}">
                         {{ item.product.name if item.product else 'N/A' }}
                     </a>
                 </td>
@@ -149,51 +160,26 @@
 <script>
 $(document).ready(function() {
     var $stockTable = $('#stockSummaryTable');
-    // Initialize DataTable only if the table element exists and has at least one data row (excluding header)
     if ($stockTable.length && $stockTable.find('tbody tr').filter(function() { return $(this).find('td').length > 0; }).length > 0) {
         var pageLengthAttr = $stockTable.data('page-length');
-        var pageLength = 15; // Default
-
+        var pageLength = 15;
         if (pageLengthAttr && !isNaN(parseInt(pageLengthAttr)) && parseInt(pageLengthAttr) > 0) {
             pageLength = parseInt(pageLengthAttr);
         }
-
         var columnsInHeader = $stockTable.find('thead th').length;
-        var orderingEnabled = columnsInHeader > 1; // Disable ordering if only one data column effectively
+        var orderingEnabled = columnsInHeader > 1;
 
         $stockTable.DataTable({
             "pageLength": pageLength,
             "searching": true,
             "ordering": orderingEnabled,
-            "order": [], // No initial sort
-            "language": {
-                "decimal":        "",
-                "emptyTable":     "ไม่มีข้อมูลในตาราง",
-                "info":           "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ",
-                "infoEmpty":      "แสดง 0 ถึง 0 จาก 0 รายการ",
-                "infoFiltered":   "(กรองจากทั้งหมด _MAX_ รายการ)",
-                "infoPostFix":    "",
-                "thousands":      ",",
-                "lengthMenu":     "แสดง _MENU_ รายการต่อหน้า",
-                "loadingRecords": "กำลังโหลด...",
-                "processing":     "กำลังประมวลผล...",
-                "search":         "ค้นหาในตาราง:",
-                "zeroRecords":    "ไม่พบรายการที่ค้นหา",
-                "paginate": {
-                    "first":      "หน้าแรก",
-                    "last":       "หน้าสุดท้าย",
-                    "next":       "ถัดไป",
-                    "previous":   "ก่อนหน้า"
-                },
-                "aria": {
-                    "sortAscending":  ": เรียงจากน้อยไปมาก",
-                    "sortDescending": ": เรียงจากมากไปน้อย"
-                }
+            "order": [],
+            "language": { /* ... (ภาษาไทยเหมือนเดิม) ... */
+                "decimal":        "", "emptyTable":     "ไม่มีข้อมูลในตาราง", "info":           "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ", "infoEmpty":      "แสดง 0 ถึง 0 จาก 0 รายการ", "infoFiltered":   "(กรองจากทั้งหมด _MAX_ รายการ)", "infoPostFix":    "", "thousands":      ",", "lengthMenu":     "แสดง _MENU_ รายการต่อหน้า", "loadingRecords": "กำลังโหลด...", "processing":     "กำลังประมวลผล...", "search":         "ค้นหาในตาราง:", "zeroRecords":    "ไม่พบรายการที่ค้นหา",
+                "paginate": { "first": "หน้าแรก", "last": "หน้าสุดท้าย", "next": "ถัดไป", "previous": "ก่อนหน้า" },
+                "aria": { "sortAscending":  ": เรียงจากน้อยไปมาก", "sortDescending": ": เรียงจากมากไปน้อย" }
             }
         });
-    } else {
-        // Optional: If you want to do something when the table is empty or not present
-        console.log("DataTables not initialized for stockSummaryTable as it's empty or not found.");
     }
 });
 </script>

@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - GoFresh StockPro{% endblock %}
+
+{% block head_extra %}
+{# ApexCharts CSS #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css">
+<style>
+    .kpi-card {
+        border-left: 5px solid var(--bs-primary);
+        margin-bottom: 1.5rem;
+        position: relative; /* Needed for absolute positioning of icon */
+        overflow: hidden; /* Hide icon overflow if needed */
+        transition: box-shadow 0.3s ease-in-out;
+    }
+    .kpi-card:hover {
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; /* Slightly larger shadow on hover */
+    }
+    .kpi-card .card-title {
+        font-size: 0.85rem; /* Slightly smaller */
+        font-weight: bold;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+    }
+    .kpi-card .kpi-value {
+        font-size: 1.7rem; /* Slightly smaller */
+        font-weight: bold;
+        color: #343a40; /* Darker text */
+        min-height: 2rem; /* Reserve space for loading indicator */
+    }
+    .kpi-card .kpi-icon {
+        font-size: 2.8rem; /* Slightly larger icon */
+        opacity: 0.15; /* More subtle icon */
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: opacity 0.3s ease;
+    }
+    .kpi-card:hover .kpi-icon {
+        opacity: 0.3; /* Make icon slightly more visible on hover */
+    }
+    /* Specific border colors for cards */
+    .kpi-card.border-left-primary { border-left-color: var(--bs-primary); }
+    .kpi-card.border-left-success { border-left-color: var(--bs-success); }
+    .kpi-card.border-left-danger { border-left-color: var(--bs-danger); }
+    .kpi-card.border-left-warning { border-left-color: var(--bs-warning); }
+    .kpi-card.border-left-info { border-left-color: var(--bs-info); } /* Added info color */
+
+    .chart-card { margin-bottom: 1.5rem; }
+    .table-sm th, .table-sm td { padding: 0.4rem; font-size: 0.875rem; vertical-align: middle;}
+    .loading-placeholder {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100px; /* Ensure it has some height */
+        color: #6c757d;
+    }
+    .quick-list-table { margin-bottom: 0; } /* Remove bottom margin for tables in cards */
+    .quick-list-table td a { text-decoration: none; color: var(--bs-body-color); }
+    .quick-list-table td a:hover { text-decoration: underline; color: var(--bs-primary); }
+    .badge { font-size: 0.75em; padding: 0.3em 0.5em;} /* Slightly larger badge */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-speedometer2 me-2"></i>Dashboard ภาพรวม</h1>
+</div>
+
+{# --- แถวแสดง KPI Cards --- #}
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow-sm h-100 py-2 kpi-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="card-title text-primary">ยอดขาย (วันนี้)</div>
+                        <div id="kpi-today-sales" class="kpi-value"><span class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                    </div>
+                    <div class="col-auto"> <i class="bi bi-cash-coin kpi-icon text-gray-300"></i> </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+         <div class="card border-left-success shadow-sm h-100 py-2 kpi-card">
+             <div class="card-body">
+                 <div class="row no-gutters align-items-center">
+                     <div class="col mr-2">
+                         <div class="card-title text-success">จำนวนรายการขาย (วันนี้)</div>
+                         <div id="kpi-today-transactions" class="kpi-value"><span class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                     </div>
+                     <div class="col-auto"> <i class="bi bi-receipt kpi-icon text-gray-300"></i> </div>
+                 </div>
+             </div>
+         </div>
+     </div>
+     <div class="col-xl-3 col-md-6 mb-4">
+         <div class="card border-left-danger shadow-sm h-100 py-2 kpi-card position-relative">
+             <div class="card-body">
+                 <div class="row no-gutters align-items-center">
+                     <div class="col mr-2">
+                         <div class="card-title text-danger">สินค้าสต็อกติดลบ</div>
+                         <div id="kpi-negative-stock" class="kpi-value"><span class="spinner-border spinner-border-sm text-danger" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                     </div>
+                     <div class="col-auto"> <i class="bi bi-exclamation-triangle-fill kpi-icon text-gray-300"></i> </div>
+                 </div>
+             </div>
+             {# Link to negative stock report (assuming you create this route/page later) #}
+             {# <a href="{{ request.app.url_path_for('ui_negative_stock_report') if 'ui_negative_stock_report' in request.app.routes_by_name else '#' }}" class="stretched-link" title="ดูรายงานสต็อกติดลบ"></a> #}
+             <a href="#" class="stretched-link" title="ดูรายงานสต็อกติดลบ (ยังไม่สร้าง)"></a> {# Placeholder link #}
+         </div>
+     </div>
+     <div class="col-xl-3 col-md-6 mb-4">
+         <div class="card border-left-warning shadow-sm h-100 py-2 kpi-card position-relative">
+             <div class="card-body">
+                 <div class="row no-gutters align-items-center">
+                     <div class="col mr-2">
+                         <div class="card-title text-warning">ใกล้หมดอายุ (7 วัน)</div>
+                         <div id="kpi-near-expiry" class="kpi-value"><span class="spinner-border spinner-border-sm text-warning" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                     </div>
+                     <div class="col-auto"> <i class="bi bi-hourglass-split kpi-icon text-gray-300"></i> </div>
+                 </div>
+             </div>
+              <a href="{{ request.app.url_path_for('ui_near_expiry_report') if 'ui_near_expiry_report' in request.app.routes_by_name else '/ui/inventory/near-expiry/' }}" class="stretched-link" title="ดูรายงานสินค้าใกล้หมดอายุ"></a>
+         </div>
+     </div>
+</div>
+
+{# --- แถวแสดงกราฟ --- #}
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow mb-4 chart-card">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">แนวโน้มยอดขาย (7 วันย้อนหลัง)</h6>
+            </div>
+            <div class="card-body">
+                <div id="sales-trend-chart">
+                    <div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow mb-4 chart-card">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">สินค้าขายดี (7 วัน, ตามจำนวน)</h6>
+            </div>
+            <div class="card-body">
+                <div id="top-products-chart">
+                     <div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{# --- แถวแสดงตารางข้อมูลด่วน --- #}
+<div class="row">
+     <div class="col-lg-6 mb-4">
+         <div class="card shadow">
+             <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">สินค้าสต็อกเหลือน้อย (<= 5 ชิ้น)</h6>
+                {# <a href="#" class="btn btn-sm btn-outline-secondary">ดูทั้งหมด</a> #}
+             </div>
+             <div class="card-body p-0">
+                  <div id="low-stock-table-container" class="table-responsive">
+                       <div class="loading-placeholder p-3">กำลังโหลด...</div>
+                  </div>
+             </div>
+         </div>
+     </div>
+     <div class="col-lg-6 mb-4">
+          <div class="card shadow">
+              <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">รายการเคลื่อนไหวล่าสุด</h6>
+              </div>
+              <div class="card-body p-0">
+                   <div id="recent-transactions-table-container" class="table-responsive">
+                       <div class="loading-placeholder p-3">กำลังโหลด...</div>
+                   </div>
+              </div>
+          </div>
+      </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{# ApexCharts JS #}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    // --- Helper Functions ---
+    function formatCurrency(value, showUnit = true) {
+        const formatted = (value != null ? parseFloat(value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00');
+        return showUnit ? formatted + ' บาท' : formatted;
+    }
+    function formatNumber(value) { return value != null ? parseInt(value).toLocaleString('th-TH') : '0'; }
+    function formatDateShort(dateString) {
+        if (!dateString) return '-'; try { const d = new Date(dateString); return d.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }); } catch (e) { return dateString; }
+    }
+    function formatDateTime(dateString) {
+        if (!dateString) return '-'; try { const d = new Date(dateString); return d.toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return dateString; }
+    }
+
+    // --- API Fetch & Render Functions ---
+    async function fetchKpiData() {
+        const kpiElements = {
+            sales: document.getElementById('kpi-today-sales'),
+            transactions: document.getElementById('kpi-today-transactions'),
+            negative: document.getElementById('kpi-negative-stock'),
+            expiry: document.getElementById('kpi-near-expiry')
+        };
+        try {
+            const response = await fetch('/api/dashboard/kpis'); // Ensure API path is correct
+            if (!response.ok) throw new Error(`KPI API Error: ${response.status}`);
+            const data = await response.json();
+
+            if(kpiElements.sales) kpiElements.sales.textContent = formatCurrency(data.today_sales_total);
+            if(kpiElements.transactions) kpiElements.transactions.textContent = formatNumber(data.today_sales_count);
+            if(kpiElements.negative) kpiElements.negative.textContent = formatNumber(data.negative_stock_item_count);
+            if(kpiElements.expiry) kpiElements.expiry.textContent = formatNumber(data.near_expiry_item_count);
+
+        } catch (error) {
+            console.error("Error fetching KPI data:", error);
+            for (const key in kpiElements) {
+                if (kpiElements[key]) kpiElements[key].textContent = "Error";
+            }
+        }
+    }
+
+    async function renderSalesTrendChart() {
+        const chartElement = document.querySelector("#sales-trend-chart"); if (!chartElement) return;
+        chartElement.innerHTML = '<div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        try {
+            const response = await fetch('/api/dashboard/sales-trend-weekly');
+            if (!response.ok) throw new Error(`Sales Trend API Error: ${response.status}`);
+            const apiData = await response.json(); if (!Array.isArray(apiData)) throw new Error("Invalid data format");
+            const chartSeries = [{ name: 'ยอดขาย', data: apiData.map(item => parseFloat(item.total_sales || 0)) }];
+            const chartCategories = apiData.map(item => formatDateShort(item.date));
+            var options = {
+                chart: { type: 'area', height: 300, toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } }, zoom: { enabled: false } },
+                series: chartSeries,
+                xaxis: { categories: chartCategories, labels: { rotate: -45, style: { fontSize: '10px' }, trim: true } },
+                yaxis: { labels: { formatter: function (val) { return val.toLocaleString('th-TH'); } } },
+                stroke: { curve: 'smooth', width: 2 }, fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.6, opacityTo: 0.2, stops: [0, 100] } },
+                tooltip: { y: { formatter: function (val) { return formatCurrency(val); } }, x: { formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? new Date(apiData[dataPointIndex].date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric'}) : val; } } },
+                dataLabels: { enabled: false }, markers: { size: 0 }, grid: { borderColor: '#e7e7e7', row: { colors: ['#f3f3f3', 'transparent'], opacity: 0.5 } },
+            };
+            chartElement.innerHTML = ''; var chart = new ApexCharts(chartElement, options); chart.render();
+        } catch (error) { console.error("Error rendering sales trend chart:", error); if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดกราฟยอดขายได้</p>'; }
+    }
+
+    async function renderTopProductsChart() {
+        const chartElement = document.querySelector("#top-products-chart"); 
+        if (!chartElement) return; 
+        chartElement.innerHTML = '<div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        try {
+            const response = await fetch('/api/dashboard/top-products-weekly'); 
+            if (!response.ok) throw new Error(`Top Products API Error: ${response.status}`);
+            const apiData = await response.json(); 
+            if (!Array.isArray(apiData)) throw new Error("Invalid data format");
+
+            if (apiData.length === 0) { 
+                chartElement.innerHTML = '<p class="text-center text-muted small p-3">ไม่มีข้อมูลสินค้าขายดีในช่วงนี้</p>'; 
+                return; 
+            }
+            
+            apiData.sort((a, b) => b.value - a.value); // Sort data just in case
+            
+            const chartSeries = [{ name: 'จำนวนที่ขายได้', data: apiData.map(item => item.value) }];
+            const chartCategories = apiData.map(item => `${item.product_name}`); // Shorter labels
+
+            var options = {
+                chart: { type: 'bar', height: 300, toolbar: { show: false } },
+                series: chartSeries,
+                xaxis: { categories: chartCategories, labels: { show: true, style: { fontSize: '10px'}, trim: true, }, tooltip: { enabled: true, formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? `SKU: ${apiData[dataPointIndex].product_sku}` : val; } } }, // Show SKU on hover
+                yaxis: { title: { text: 'จำนวน (ชิ้น)' } },
+                plotOptions: { bar: { horizontal: true, barHeight: '50%', borderRadius: 3 } },
+                dataLabels: { enabled: true, formatter: function(val) { return formatNumber(val); }, offsetX: 15, style: { colors: ['#333'] }, background: { enabled: true, foreColor: '#fff', padding: 4, borderRadius: 2, borderWidth: 1, borderColor: '#ddd', opacity: 0.9 } },
+                tooltip: { 
+                    y: { 
+                        title: { formatter: function (seriesName) { return seriesName; } },
+                        formatter: function (val) { return formatNumber(val) + " ชิ้น"; } // Format tooltip value
+                    } 
+                },
+                colors: ['#198754'] // Success color
+            };
+            chartElement.innerHTML = ''; 
+            var chart = new ApexCharts(chartElement, options); 
+            chart.render();
+        } catch (error) { 
+            console.error("Error rendering top products chart:", error); // Log the actual error object
+            if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดกราฟสินค้าขายดีได้</p>'; 
+        }
+    }
+
+    async function fetchAndDisplayLowStock() {
+        const container = document.getElementById('low-stock-table-container'); if (!container) return;
+        container.innerHTML = '<div class="loading-placeholder p-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        try {
+            const response = await fetch('/api/dashboard/low-stock-items?limit=5');
+            if (!response.ok) throw new Error(`Low Stock API Error: ${response.status}`);
+            const items = await response.json(); if (!Array.isArray(items)) throw new Error("Invalid data format");
+
+            if (items.length === 0) { container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีสินค้าสต็อกเหลือน้อย</p>'; return; }
+            
+            let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>'; // Added table-hover
+            items.forEach(item => {
+                // Make sure product_id is available for the link
+                 const editUrl = `/ui/products/edit/${item.product_id}`; // Construct URL directly
+                tableHtml += `<tr>
+                                <td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} (${item.product_sku})</a></td>
+                                <td class="text-end"><span class="badge bg-warning text-dark">${formatNumber(item.value)}</span></td>
+                              </tr>`;
+            });
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+
+        } catch (error) { console.error("Error fetching low stock data:", error); if(container) container.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดข้อมูลสต็อกน้อยได้</p>'; }
+    }
+
+    async function fetchAndDisplayRecentTransactions() {
+        const container = document.getElementById('recent-transactions-table-container'); if (!container) return;
+        container.innerHTML = '<div class="loading-placeholder p-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        try {
+            const response = await fetch('/api/dashboard/recent-transactions?limit=5');
+            if (!response.ok) throw new Error(`Recent Tx API Error: ${response.status}`);
+            const transactions = await response.json(); if (!Array.isArray(transactions)) throw new Error("Invalid data format");
+
+            if (transactions.length === 0) { container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีรายการเคลื่อนไหวล่าสุด</p>'; return; }
+
+             let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>';
+             transactions.forEach(tx => {
+                 let qtyClass = tx.quantity_change > 0 ? 'text-success' : 'text-danger';
+                 let typeBadge = '';
+                 if(tx.transaction_type === 'STOCK_IN') typeBadge = '<span class="badge bg-success-subtle text-success-emphasis rounded-pill">รับเข้า</span>';
+                 else if (tx.transaction_type === 'SALE') typeBadge = '<span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">ขาย</span>'; // Changed color
+                 else if (tx.transaction_type.includes('ADJUSTMENT')) typeBadge = '<span class="badge bg-warning-subtle text-warning-emphasis rounded-pill">ปรับปรุง</span>';
+                 else if (tx.transaction_type.includes('TRANSFER')) typeBadge = '<span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">โอนย้าย</span>';
+                 else typeBadge = `<span class="badge bg-light text-dark rounded-pill">${tx.transaction_type}</span>`;
+
+                 tableHtml += `
+                     <tr>
+                         <td>
+                             ${typeBadge}
+                             <strong class="ms-1">${tx.product_name}</strong>
+                             <small class="text-muted d-block ms-1">${tx.location_name} @ ${formatDateTime(tx.transaction_date)}</small>
+                             ${tx.notes ? `<small class="text-muted d-block ms-1 fst-italic">Note: ${tx.notes.substring(0,50)}${tx.notes.length > 50 ? '...' : ''}</small>` : ''}
+                         </td>
+                         <td class="text-end ${qtyClass} fw-bold">${tx.quantity_change > 0 ? '+' : ''}${formatNumber(tx.quantity_change)}</td>
+                     </tr>`;
+             });
+             tableHtml += '</tbody></table>';
+             container.innerHTML = tableHtml;
+
+        } catch (error) { console.error("Error fetching recent transactions:", error); if(container) container.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดรายการล่าสุดได้</p>'; }
+    }
+
+
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch all data on load
+        fetchAllDashboardData();
+
+        // Optional: Set interval for auto-refreshing KPIs
+        // setInterval(fetchKpiData, 3 * 60 * 1000); // Refresh KPIs every 3 minutes
+    });
+
+    // Function to fetch all data (useful for a refresh button)
+    function fetchAllDashboardData() {
+        fetchKpiData();
+        renderSalesTrendChart();
+        renderTopProductsChart();
+        // renderCategoryDistributionChart(); // Call this when implemented
+        fetchAndDisplayLowStock();
+        fetchAndDisplayRecentTransactions();
+    }
+
+</script>
+{% endblock %}

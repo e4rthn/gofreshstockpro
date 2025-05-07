@@ -12,14 +12,19 @@
     </div>
 {% endif %}
 
-<form method="post" action="/ui/products/add">
-    <div class="row g-3"> {# ใช้ Grid เพื่อจัด layout #}
+<form method="post" action="{{ request.app.url_path_for('ui_handle_add_product_form') }}">
+    <div class="row g-3">
         <div class="col-md-6 mb-3">
-            <label for="sku" class="form-label">SKU/รหัสสินค้า <span class="text-danger">*</span></label>
+            <label for="sku" class="form-label">SKU/รหัสสินค้า (ภายในร้าน) <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="sku" name="sku" required
                    value="{{ form_data.sku if form_data else '' }}">
         </div>
         <div class="col-md-6 mb-3">
+            <label for="barcode" class="form-label">บาร์โค้ดสากล (EAN/UPC - ถ้ามี)</label>
+            <input type="text" class="form-control" id="barcode" name="barcode"
+                   value="{{ form_data.barcode if form_data else '' }}">
+        </div>
+        <div class="col-md-12 mb-3"> {# Name full width #}
             <label for="name" class="form-label">ชื่อสินค้า <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="name" name="name" required
                    value="{{ form_data.name if form_data else '' }}">
@@ -30,7 +35,7 @@
                 <option value="">-- เลือกหมวดหมู่ --</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}"
-                            {% if form_data and form_data.category_id|int == category.id %}selected{% endif %}>
+                            {% if form_data and form_data.category_id|string == category.id|string %}selected{% endif %}>
                         {{ category.name }}
                     </option>
                 {% endfor %}
@@ -63,6 +68,6 @@
     </div>
 
     <button type="submit" class="btn btn-primary">เพิ่มสินค้า</button>
-    <a href="/ui/products/" class="btn btn-secondary">ยกเลิก</a>
+    <a href="{{ request.app.url_path_for('ui_read_all_products') }}" class="btn btn-secondary">ยกเลิก</a>
 </form>
 {% endblock %}

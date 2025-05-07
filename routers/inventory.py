@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional, Tuple
 from datetime import date, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode as python_urlencode # Renamed to avoid conflict with Jinja's urlencode
 import math
 
 # Absolute Imports
@@ -12,16 +12,18 @@ import schemas
 import models
 from services import inventory_service, product_service, category_service, location_service
 from database import get_db
+# templates access via request.app.state.templates
 
 API_INCLUDE_IN_SCHEMA = True
 
 router = APIRouter(
+    # prefix="/api/inventory", # Prefix is set in main.py when including the router
     tags=["API - สต็อกสินค้า"],
     include_in_schema=API_INCLUDE_IN_SCHEMA
 )
 
 ui_router = APIRouter(
-    prefix="/ui/inventory",
+    prefix="/ui/inventory", # Prefix for UI Routes of Inventory
     tags=["หน้าเว็บ - สต็อกสินค้า"],
     include_in_schema=False
 )
@@ -32,18 +34,22 @@ async def api_get_inventory_summary(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1),
     category_id_str: Optional[str] = Query(None, alias="category_id"),
-    location_id_str: Optional[str] = Query(None, alias="location_id"), # Added location_id for API
+    location_id_str: Optional[str] = Query(None, alias="location_id"),
     db: Session = Depends(get_db)
 ):
     category_id: Optional[int] = None
     if category_id_str is not None and category_id_str.strip():
-        try: category_id = int(category_id_str)
-        except ValueError: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid category_id format for API.")
+        try:
+            category_id = int(category_id_str)
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid category_id format for API.")
 
     location_id: Optional[int] = None
     if location_id_str is not None and location_id_str.strip():
-        try: location_id = int(location_id_str)
-        except ValueError: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid location_id format for API.")
+        try:
+            location_id = int(location_id_str)
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid location_id format for API.")
 
     stock_summary_data = inventory_service.get_current_stock_summary(
         db, skip=skip, limit=limit, category_id=category_id, location_id=location_id
@@ -58,11 +64,13 @@ async def api_record_new_stock_in(stock_in: schemas.StockInSchema, db: Session =
              joinedload(models.InventoryTransaction.product).joinedload(models.Product.category),
              joinedload(models.InventoryTransaction.location)
          ).filter(models.InventoryTransaction.id == created_transaction.id).first()
-        if tx is None: raise HTTPException(status_code=500, detail="ไม่สามารถดึงข้อมูล Transaction ที่สร้างได้")
+        if tx is None:
+            raise HTTPException(status_code=500, detail="Could not retrieve the created transaction with details.")
         return tx
     except ValueError as e:
         error_message = str(e)
-        if "ไม่พบ" in error_message: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_message)
+        if "ไม่พบ" in error_message:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_message)
         else:
             print(f"Stock-in API Error: {error_message}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"ไม่สามารถบันทึกสต็อกเข้า: {error_message}")
@@ -78,7 +86,8 @@ async def api_record_stock_adjustment(adjustment: schemas.StockAdjustmentSchema,
              joinedload(models.InventoryTransaction.product).joinedload(models.Product.category),
              joinedload(models.InventoryTransaction.location)
          ).filter(models.InventoryTransaction.id == created_transaction.id).first()
-        if tx is None: raise HTTPException(status_code=500, detail="ไม่สามารถดึงข้อมูล Transaction ที่สร้างได้")
+        if tx is None:
+            raise HTTPException(status_code=500, detail="Could not retrieve the created adjustment transaction with details.")
         return tx
     except ValueError as e:
         error_message = str(e)
@@ -95,7 +104,9 @@ async def api_record_stock_adjustment(adjustment: schemas.StockAdjustmentSchema,
 @router.get("/near-expiry/", response_model=List[schemas.InventoryTransaction])
 async def api_get_near_expiry_report(
     days_ahead: int = Query(30, ge=1),
-    skip: int = Query(0, ge=0), limit: int = Query(100, ge=1), db: Session = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1),
+    db: Session = Depends(get_db)
 ):
     report_data = inventory_service.get_near_expiry_transactions(db, days_ahead=days_ahead, skip=skip, limit=limit)
     return report_data["transactions"]
@@ -116,7 +127,7 @@ async def api_record_stock_transfer(
         ).filter(models.InventoryTransaction.id == tx_in.id).first()
 
         if not t_out or not t_in:
-            raise HTTPException(status_code=500,detail="ไม่สามารถดึงข้อมูล Transaction โอนย้ายที่สร้างได้")
+            raise HTTPException(status_code=500, detail="ไม่สามารถดึงข้อมูล Transaction โอนย้ายที่สร้างได้")
         return [t_out, t_in]
     except ValueError as e:
         error_message = str(e)
@@ -130,37 +141,39 @@ async def api_record_stock_transfer(
         print(f"Unexpected API Error during transfer: {type(e).__name__} - {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="เกิดข้อผิดพลาดที่ไม่คาดคิด (API Transfer)")
 
-# --- UI Routes ---
 
+# --- UI Routes ---
 @ui_router.get("/summary/", response_class=HTMLResponse, name="ui_view_inventory_summary")
 async def ui_view_inventory_summary(
     request: Request,
     page: int = Query(1, ge=1),
     limit: int = Query(15, ge=1),
     category_str: Optional[str] = Query(None, alias="category"),
-    location_str: Optional[str] = Query(None, alias="location"), # Changed from location_id_str
+    location_str: Optional[str] = Query(None, alias="location"),
     db: Session = Depends(get_db)
 ):
     templates = request.app.state.templates
-    if templates is None: raise HTTPException(status_code=500, detail="Templates not configured")
+    if templates is None:
+        raise HTTPException(status_code=500, detail="Templates not configured")
 
     skip = (page - 1) * limit
-    message = request.query_params.get('message')
-    error = request.query_params.get('error')
 
     category_id: Optional[int] = None
     if category_str is not None and category_str.strip():
         try:
             category_id = int(category_str)
         except ValueError:
-            pass # Or handle error: raise HTTPException(status_code=400, detail="Invalid category format")
+            # Invalid category string, treat as no filter or raise error
+            # For now, treat as no filter (category_id remains None)
+            pass
 
     location_id: Optional[int] = None
     if location_str is not None and location_str.strip():
         try:
             location_id = int(location_str)
         except ValueError:
-            pass # Or handle error: raise HTTPException(status_code=400, detail="Invalid location format")
+            # Invalid location string, treat as no filter
+            pass
 
     report_data = inventory_service.get_current_stock_summary(
         db, skip=skip, limit=limit, category_id=category_id, location_id=location_id
@@ -175,18 +188,67 @@ async def ui_view_inventory_summary(
     locations_data = location_service.get_locations(db=db, limit=1000)
     all_locations = locations_data.get("items", [])
 
-    return templates.TemplateResponse("inventory/summary.html", {
+    base_summary_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
+
+    def _create_filter_link_for_template(**kwargs_to_update):
+        # Start with current query params from the request, converting Starlette's MultiDict to a simple dict
+        # This takes the first value for any key that might have multiple values (common for query_params)
+        current_request_params = {k: v for k, v in request.query_params.items()}
+        
+        final_query_params = {}
+
+        # Carry over 'limit' by default if not being explicitly changed by kwargs_to_update
+        if 'limit' not in kwargs_to_update and 'limit' in current_request_params:
+            final_query_params['limit'] = current_request_params['limit']
+        elif 'limit' in kwargs_to_update and kwargs_to_update['limit'] is not None:
+            final_query_params['limit'] = str(kwargs_to_update['limit'])
+        # If limit is None in kwargs, it's not added, effectively removing it or using server default if not in current_request_params
+
+        # Handle new 'location' and 'category' from kwargs_to_update
+        # If a key is in kwargs_to_update, its value (even if None) overrides current_request_params for that key
+        for key in ['location', 'category']:
+            if key in kwargs_to_update:
+                value = kwargs_to_update[key]
+                if value is not None and str(value).strip() != "":
+                    final_query_params[key] = str(value)
+                # If value is None or empty string, this param is effectively removed from the new link
+            elif key in current_request_params and str(current_request_params[key]).strip() != "":
+                 # Carry over from current request if not being updated by kwargs
+                final_query_params[key] = current_request_params[key]
+
+
+        # Page handling:
+        # Reset page to 1 if any primary filter (location, category) is actively being set/changed via kwargs_to_update,
+        # OR if 'page' is not explicitly passed in kwargs_to_update.
+        # If 'page' is explicitly passed as None, it's removed (no page param).
+        if 'page' in kwargs_to_update: # If page is explicitly being set/removed by the call
+            if kwargs_to_update['page'] is not None:
+                final_query_params['page'] = str(kwargs_to_update['page'])
+            # If page is None in kwargs_to_update, it's already handled (not added to final_query_params)
+        elif any(k in kwargs_to_update for k in ['location', 'category']): # Reset page if primary filters change
+            final_query_params['page'] = '1'
+        elif 'page' in current_request_params: # Else, carry over current page if it exists
+            final_query_params['page'] = current_request_params['page']
+        # If no page info at all, server will default (usually to 1 for Query(1, ge=1))
+
+        query_string = python_urlencode(final_query_params)
+        return f"{base_summary_url_path}?{query_string}" if query_string else base_summary_url_path
+
+    context = {
         "request": request, "stock_summary": items, "page": page, "limit": limit,
         "total_count": total_count, "total_pages": total_pages,
-        "message": message, "error": error, "skip": skip,
+        "message": request.query_params.get('message'), # Get message from actual request for display
+        "error": request.query_params.get('error'),     # Get error from actual request for display
+        "skip": skip,
         "all_categories": all_categories,
         "selected_category_id": category_id,
         "all_locations": all_locations,
-        "selected_location_id": location_id
-    })
+        "selected_location_id": location_id,
+        "create_filter_link": _create_filter_link_for_template
+    }
+    return templates.TemplateResponse("inventory/summary.html", context)
 
-# ... (rest of the UI routes: /stock-in, /adjust, /near-expiry, /transfer) ...
-# (Ensure ui_show_stock_in_form, ui_handle_stock_in_form, etc. are present as in your original file)
+
 @ui_router.get("/stock-in", response_class=HTMLResponse, name="ui_show_stock_in_form")
 async def ui_show_stock_in_form(request: Request, db: Session = Depends(get_db)):
     templates = request.app.state.templates
@@ -241,10 +303,10 @@ async def ui_handle_stock_in_form(
          )
          inventory_service.record_stock_in(db=db, stock_in_data=stock_in_data)
          success_message = f"บันทึกการรับสินค้าเข้า (รหัสสินค้า: {product_id}, จำนวน: {quantity}) เรียบร้อยแล้ว"
-         
-         redirect_url_path = request.app.url_path_for('ui_view_inventory_summary')
-         query_params = urlencode({"message": success_message})
-         redirect_url = f"{str(redirect_url_path)}?{query_params}"
+
+         redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
+         query_params = python_urlencode({"message": success_message})
+         redirect_url = f"{redirect_url_path}?{query_params}" if query_params else redirect_url_path
          return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
     except ValueError as e:
@@ -296,10 +358,10 @@ async def ui_handle_adjustment_form(
         adjustment_data_schema = schemas.StockAdjustmentSchema(**form_data_dict)
         inventory_service.record_stock_adjustment(db=db, adjustment_data=adjustment_data_schema)
         success_message = f"บันทึกการปรับปรุงสต็อก (สินค้า ID: {product_id}, สถานที่ ID: {location_id}, จำนวน: {quantity_change:+}) เรียบร้อยแล้ว"
-        
-        redirect_url_path = request.app.url_path_for('ui_view_inventory_summary')
-        query_params = urlencode({"message": success_message})
-        redirect_url = f"{str(redirect_url_path)}?{query_params}"
+
+        redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
+        query_params = python_urlencode({"message": success_message})
+        redirect_url = f"{redirect_url_path}?{query_params}" if query_params else redirect_url_path
         return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
     except ValueError as e:
          categories_data = category_service.get_categories(db=db, limit=1000); categories = categories_data.get("items", [])
@@ -371,9 +433,10 @@ async def ui_handle_transfer_form(
         transfer_data_schema = schemas.StockTransferSchema(**form_data_dict)
         inventory_service.record_stock_transfer(db=db, transfer_data=transfer_data_schema)
         success_message = f"โอนย้ายสินค้า ID {product_id} จำนวน {quantity} จากสถานที่ ID {from_location_id} ไปยัง ID {to_location_id} เรียบร้อยแล้ว"
-        redirect_url_path = request.app.url_path_for('ui_view_inventory_summary')
-        query_params = urlencode({"message": success_message})
-        redirect_url = f"{str(redirect_url_path)}?{query_params}"
+
+        redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
+        query_params = python_urlencode({"message": success_message})
+        redirect_url = f"{redirect_url_path}?{query_params}" if query_params else redirect_url_path
         return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
     except ValueError as e:
          locations_data = location_service.get_locations(db=db, limit=1000); locations = locations_data.get("items", [])

@@ -1,12 +1,13 @@
 # models/product.py
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from database import Base # Absolute Import
+from database import Base
 
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String, unique=True, index=True, nullable=False)
+    barcode = Column(String, unique=True, index=True, nullable=True)
     name = Column(String, index=True, nullable=False)
     description = Column(Text, nullable=True)
     standard_cost = Column(Float, nullable=True)
@@ -22,4 +23,4 @@ class Product(Base):
     stock_count_items = relationship("StockCountItem", back_populates="product")
 
     def __repr__(self):
-        return f"<Product(id={self.id}, sku='{self.sku}', name='{self.name}', price_b2c={self.price_b2c})>"
+        return f"<Product(id={self.id}, sku='{self.sku}', name='{self.name}', barcode='{self.barcode}')>"

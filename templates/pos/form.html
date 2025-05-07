@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}บันทึกการขาย (POS) - GoFresh StockPro{% endblock %}
 
 {% block head_extra %}
@@ -18,6 +17,8 @@
     .product-price { font-size: 0.85rem; color: #007bff; }
     .product-sku { font-size: 0.75rem; color: #6c757d; }
     .location-btn-group .btn { border-radius: .25rem !important; margin-right: 5px; }
+    #scan-input-container { margin-bottom: 1rem; }
+    #scan-error { min-height: 1.2em; } /* Reserve space for error message */
 </style>
 {% endblock %}
 
@@ -31,13 +32,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 {% endif %}
-
 {% if error %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
        ข้อผิดพลาด: {{ error }}
        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    {% if ask_override and "สต็อกในระบบไม่เพียงพอ" in error %} {# Check ask_override flag #}
+    {% if ask_override and "สต็อกในระบบไม่เพียงพอ" in error %}
     <div class="alert alert-warning mt-2" role="alert">
         <strong>สต็อกในระบบไม่เพียงพอ!</strong> หากคุณยืนยันว่ามีสินค้าจริงหน้าร้าน และต้องการขายต่อ,
         กรุณาทำเครื่องหมายที่ช่อง "ยืนยันการขายแม้สต็อกในระบบไม่พอ" ด้านล่าง แล้วลองบันทึกอีกครั้ง
@@ -59,20 +59,26 @@
                 </div>
             </div>
             <hr>
+
+            <div id="scan-input-container">
+                <label for="scan-input" class="form-label">สแกน/กรอกรหัส (SKU/Barcode) แล้ว Enter:</label>
+                <input type="text" class="form-control form-control-lg" id="scan-input" placeholder="รอรับการสแกน...">
+                <div id="scan-error" class="text-danger small mt-1"></div>
+            </div>
+            <hr>
+
             <ul class="nav nav-tabs category-tabs mb-2">
                 {% for category in categories %}
                 <li class="nav-item">
                     <a class="nav-link {% if loop.first %}active{% endif %}"
-                       data-bs-toggle="tab"
-                       href="#category-pane-{{ category.id }}"
-                       role="tab"
-                       data-category-id="{{ category.id }}">
+                       data-bs-toggle="tab" href="#category-pane-{{ category.id }}"
+                       role="tab" data-category-id="{{ category.id }}">
                        {{ category.name }}
                     </a>
                 </li>
                 {% endfor %}
             </ul>
-            <div class="border p-2 bg-light" style="min-height: 300px;">
+            <div class="border p-2 bg-light" style="min-height: 250px;">
                 <div id="product-grid" class="row row-cols-2 row-cols-sm-3 row-cols-md-3 row-cols-lg-4 g-2">
                     <p id="product-grid-placeholder" class="text-muted p-3">กรุณาเลือกหมวดหมู่เพื่อแสดงสินค้า...</p>
                 </div>
@@ -105,12 +111,11 @@
                 <label for="notes" class="form-label">หมายเหตุการขาย</label>
                 <textarea class="form-control form-control-sm" id="notes" name="notes" rows="2"></textarea>
             </div>
-            <div id="sale-items-data"></div> <div class="mb-3 form-check">
+            <div id="sale-items-data"></div>
+
+            <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="override_stock_check" name="override_stock_check" value="True" {% if ask_override %}checked{% endif %}>
-                {# The value "True" will be converted to boolean True by FastAPI/Pydantic if present, otherwise False.
-                   If ask_override is true from a previous error, we can pre-check it.
-                #}
-                <label class="form-check-label" for="override_stock_check">ยืนยันการขายแม้สต็อกในระบบไม่พอ (กรณีมีของหน้าร้านจริง)</label>
+                <label class="form-check-label" for="override_stock_check">ยืนยันการขายแม้สต็อกในระบบไม่พอ</label>
             </div>
 
             <div class="d-grid gap-2">
@@ -131,221 +136,116 @@
     const saleItemsTableBody = document.querySelector('#sale-items-table tbody');
     const noItemsRow = document.getElementById('no-items-row');
     const saleTotalElement = document.getElementById('sale-total');
-    const saleItemsDataContainer = document.getElementById('sale-items-data'); // For hidden inputs
+    const saleItemsDataContainer = document.getElementById('sale-items-data');
     const posForm = document.getElementById('pos-form');
-    const overrideCheckbox = document.getElementById('override_stock_check');
+    const scanInput = document.getElementById('scan-input');
+    const scanErrorDiv = document.getElementById('scan-error');
 
     let saleTotal = 0.0;
-    let itemCounter = 0; // For unique IDs for hidden inputs if needed
+    let itemCounter = 0; // For unique refs for hidden inputs
 
     async function loadProductsForCategory(categoryId) {
-        if (!categoryId) {
-            productGrid.innerHTML = '';
-            if(productGridPlaceholder) productGridPlaceholder.style.display = 'block';
-            return;
-        }
+        // ... (โค้ด loadProductsForCategory เหมือนเดิม) ...
+        if (!categoryId) { productGrid.innerHTML = ''; if(productGridPlaceholder) productGridPlaceholder.style.display = 'block'; return; }
         if(productGridPlaceholder) productGridPlaceholder.style.display = 'none';
         productGrid.innerHTML = '<p class="text-muted p-3">กำลังโหลดสินค้า...</p>';
-
         try {
-            // Use the direct API path, ensure it's correct
             const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const products = await response.json();
             productGrid.innerHTML = '';
             if (products.length > 0) {
                 products.forEach(product => {
-                    const card = document.createElement('div');
-                    card.className = 'col';
-                    card.innerHTML = `
-                        <div class="product-card d-flex flex-column h-100">
-                            <div class="product-name">${product.name}</div>
-                            <div>
-                                <div class="product-sku">SKU: ${product.sku}</div>
-                                <div class="product-price">${parseFloat(product.price_b2c || 0).toFixed(2)} บาท</div>
-                            </div>
-                        </div>
-                    `;
-                    card.dataset.productId = product.id;
-                    card.dataset.productName = product.name;
-                    card.dataset.productSku = product.sku;
-                    card.dataset.unitPrice = product.price_b2c || '0'; // Default to 0 if null
-                    card.addEventListener('click', handleProductCardClick);
-                    productGrid.appendChild(card);
+                    const card = document.createElement('div'); card.className = 'col';
+                    card.innerHTML = `<div class="product-card d-flex flex-column h-100"><div class="product-name">${product.name}</div><div><div class="product-sku">SKU: ${product.sku} ${product.barcode ? `[${product.barcode}]` : ''}</div><div class="product-price">${parseFloat(product.price_b2c || 0).toFixed(2)} บาท</div></div></div>`;
+                    card.dataset.productId = product.id; card.dataset.productName = product.name; card.dataset.productSku = product.sku; card.dataset.unitPrice = product.price_b2c || '0'; card.dataset.barcode = product.barcode || '';
+                    card.addEventListener('click', handleProductCardClick); productGrid.appendChild(card);
                 });
-            } else {
-                productGrid.innerHTML = '<p class="text-muted p-3">-- ไม่มีสินค้าในหมวดหมู่นี้ --</p>';
-            }
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            productGrid.innerHTML = '<p class="text-danger p-3">-- เกิดข้อผิดพลาดในการโหลดสินค้า --</p>';
-        }
+            } else { productGrid.innerHTML = '<p class="text-muted p-3">-- ไม่มีสินค้าในหมวดหมู่นี้ --</p>'; }
+        } catch (error) { console.error('Error fetching products:', error); productGrid.innerHTML = '<p class="text-danger p-3">-- เกิดข้อผิดพลาดในการโหลดสินค้า --</p>'; }
     }
 
     categoryTabs.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(event) { // Use shown.bs.tab for Bootstrap 5
-            const categoryId = event.target.dataset.categoryId;
-            loadProductsForCategory(categoryId);
-        });
+        tab.addEventListener('shown.bs.tab', function(event) { loadProductsForCategory(event.target.dataset.categoryId); });
     });
 
     function handleProductCardClick(event) {
+        // ... (โค้ด handleProductCardClick เหมือนเดิม, แต่ต้องส่ง barcode ไป addItemToSale) ...
         const card = event.currentTarget;
-        const productId = card.dataset.productId;
-        // Check if location is selected
         const selectedLocation = document.querySelector('input[name="location_id"]:checked');
-        if (!selectedLocation) {
-            alert('กรุณาเลือกสถานที่ขายก่อนเพิ่มสินค้า');
-            // Optionally, focus on the location selection or provide better visual feedback
-            // For example, by adding a temporary red border to the location group.
-            const locationGroup = document.querySelector('.location-btn-group');
-            if (locationGroup) {
-                locationGroup.classList.add('border', 'border-danger');
-                setTimeout(() => locationGroup.classList.remove('border', 'border-danger'), 3000);
-            }
-            return;
-        }
-        addItemToSale(
-            productId,
-            card.dataset.productName,
-            card.dataset.productSku,
-            1, // Default quantity
-            parseFloat(card.dataset.unitPrice)
-        );
+        if (!selectedLocation) { alert('กรุณาเลือกสถานที่ขายก่อนเพิ่มสินค้า'); return; }
+        addItemToSale(card.dataset.productId, card.dataset.productName, card.dataset.productSku, 1, parseFloat(card.dataset.unitPrice), card.dataset.barcode);
     }
 
-    function addItemToSale(productId, productName, productSku, quantity, unitPrice) {
-        // Check if item already exists, if so, maybe update quantity?
-        // For now, we'll add as a new line or a more complex logic can be added to update existing item row.
+    function addItemToSale(productId, productName, productSku, quantity, unitPrice, productBarcode = null) {
+        // ... (โค้ด addItemToSale เหมือนเดิม, อาจจะเพิ่มแสดง barcode ในตารางถ้าต้องการ) ...
         const existingRow = saleItemsTableBody.querySelector(`tr[data-product-id="${productId}"]`);
-
         if (existingRow) {
-            // Item exists, update quantity and totals
-            const quantityInput = existingRow.querySelector('.item-quantity-display'); // Assuming you add such an input or display
-            const currentItemQuantity = parseInt(quantityInput ? quantityInput.textContent : existingRow.cells[1].textContent); // Get current qty
-            const newQuantity = currentItemQuantity + quantity;
-
-            existingRow.cells[1].textContent = newQuantity; // Update quantity display
-            const itemTotalPrice = newQuantity * unitPrice;
-            existingRow.cells[3].textContent = itemTotalPrice.toFixed(2); // Update total price display
-
-            // Update hidden input for quantity
-            const hiddenQtyInput = saleItemsDataContainer.querySelector(`input[name="item_quantity"][data-product-id-ref="${productId}"]`);
-            if(hiddenQtyInput) hiddenQtyInput.value = newQuantity;
-
-            // Recalculate grand total
-            updateGrandTotal();
-
+            const quantityCell = existingRow.cells[1]; const currentItemQuantity = parseInt(quantityCell.textContent); const newQuantity = currentItemQuantity + quantity; quantityCell.textContent = newQuantity;
+            const itemTotalPrice = newQuantity * unitPrice; existingRow.cells[3].textContent = itemTotalPrice.toFixed(2);
+            const hiddenQtyInput = saleItemsDataContainer.querySelector(`input[name="item_quantity"][data-product-id-ref="${productId}"]`); if(hiddenQtyInput) hiddenQtyInput.value = newQuantity;
         } else {
-            // Item does not exist, add new row
-            const itemTotalPrice = quantity * unitPrice;
-            const currentItemRef = `item_ref_${itemCounter++}`; // Unique ref for inputs of this item
-
-            const newRow = document.createElement('tr');
-            newRow.dataset.productId = productId; // Store product ID on the row for easier access
-            newRow.dataset.itemRef = currentItemRef;
-            newRow.innerHTML = `
-                <td>${productName} (${productSku})</td>
-                <td class="text-end item-quantity-display">${quantity}</td>
-                <td class="text-end">${unitPrice.toFixed(2)}</td>
-                <td class="text-end">${itemTotalPrice.toFixed(2)}</td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-danger btn-sm remove-item-btn" data-item-ref="${currentItemRef}">X</button>
-                </td>
-            `;
+            const itemTotalPrice = quantity * unitPrice; const currentItemRef = `item_ref_${itemCounter++}`; const newRow = document.createElement('tr'); newRow.dataset.productId = productId; newRow.dataset.itemRef = currentItemRef;
+            let displayName = `${productName} (${productSku})`;
+            // if (productBarcode && productBarcode !== productSku) { displayName += ` [BC: ${productBarcode}]`; } // Optionally display barcode
+            newRow.innerHTML = `<td>${displayName}</td><td class="text-end item-quantity-display">${quantity}</td><td class="text-end">${unitPrice.toFixed(2)}</td><td class="text-end">${itemTotalPrice.toFixed(2)}</td><td class="text-center"><button type="button" class="btn btn-danger btn-sm remove-item-btn" data-item-ref="${currentItemRef}">X</button></td>`;
             saleItemsTableBody.appendChild(newRow);
-
-            // Add hidden inputs for this item
-            const hiddenProductId = document.createElement('input');
-            hiddenProductId.type = 'hidden'; hiddenProductId.name = 'item_product_id';
-            hiddenProductId.value = productId; hiddenProductId.dataset.itemRef = currentItemRef;
-            saleItemsDataContainer.appendChild(hiddenProductId);
-
-            const hiddenQuantity = document.createElement('input');
-            hiddenQuantity.type = 'hidden'; hiddenQuantity.name = 'item_quantity';
-            hiddenQuantity.value = quantity; hiddenQuantity.dataset.itemRef = currentItemRef;
-            hiddenQuantity.dataset.productIdRef = productId; // For easier update if item exists
-            saleItemsDataContainer.appendChild(hiddenQuantity);
-
-            const hiddenUnitPrice = document.createElement('input');
-            hiddenUnitPrice.type = 'hidden'; hiddenUnitPrice.name = 'item_unit_price';
-            hiddenUnitPrice.value = unitPrice.toFixed(2); hiddenUnitPrice.dataset.itemRef = currentItemRef;
-            saleItemsDataContainer.appendChild(hiddenUnitPrice);
-
-            updateGrandTotal();
+            const hiddenProductId = document.createElement('input'); hiddenProductId.type = 'hidden'; hiddenProductId.name = 'item_product_id'; hiddenProductId.value = productId; hiddenProductId.dataset.itemRef = currentItemRef; saleItemsDataContainer.appendChild(hiddenProductId);
+            const hiddenQuantity = document.createElement('input'); hiddenQuantity.type = 'hidden'; hiddenQuantity.name = 'item_quantity'; hiddenQuantity.value = quantity; hiddenQuantity.dataset.itemRef = currentItemRef; hiddenQuantity.dataset.productIdRef = productId; saleItemsDataContainer.appendChild(hiddenQuantity);
+            const hiddenUnitPrice = document.createElement('input'); hiddenUnitPrice.type = 'hidden'; hiddenUnitPrice.name = 'item_unit_price'; hiddenUnitPrice.value = unitPrice.toFixed(2); hiddenUnitPrice.dataset.itemRef = currentItemRef; saleItemsDataContainer.appendChild(hiddenUnitPrice);
         }
-
-
         if (noItemsRow) noItemsRow.style.display = 'none';
+        updateGrandTotal();
     }
-    
-    function updateGrandTotal() {
-        saleTotal = 0;
-        const rows = saleItemsTableBody.querySelectorAll('tr:not(#no-items-row)');
-        rows.forEach(row => {
-            const quantity = parseInt(row.cells[1].textContent);
-            const unitPrice = parseFloat(row.cells[2].textContent);
-            if (!isNaN(quantity) && !isNaN(unitPrice)) {
-                 saleTotal += quantity * unitPrice;
+
+    function updateGrandTotal() { /* ... (เหมือนเดิม) ... */ saleTotal = 0; const rows = saleItemsTableBody.querySelectorAll('tr:not(#no-items-row)'); rows.forEach(row => { const quantity = parseInt(row.cells[1].textContent); const unitPrice = parseFloat(row.cells[2].textContent); if (!isNaN(quantity) && !isNaN(unitPrice)) { saleTotal += quantity * unitPrice; }}); saleTotalElement.textContent = saleTotal.toFixed(2); }
+    saleItemsTableBody.addEventListener('click', function(event) { /* ... (เหมือนเดิม) ... */ if (event.target.classList.contains('remove-item-btn')) { const button = event.target; const itemRefToRemove = button.dataset.itemRef; const rowToRemove = saleItemsTableBody.querySelector(`tr[data-item-ref="${itemRefToRemove}"]`); if (rowToRemove) rowToRemove.remove(); saleItemsDataContainer.querySelectorAll(`input[data-item-ref="${itemRefToRemove}"]`).forEach(input => input.remove()); updateGrandTotal(); if (saleItemsTableBody.querySelectorAll('tr:not(#no-items-row)').length === 0 && noItemsRow) { noItemsRow.style.display = ''; } } });
+
+    // Barcode Scan Logic
+    if (scanInput) {
+        scanInput.addEventListener('keypress', async function(event) {
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                event.preventDefault();
+                const scanCode = this.value.trim();
+                if (scanErrorDiv) scanErrorDiv.textContent = '';
+
+                if (scanCode === "") return;
+
+                const selectedLocation = document.querySelector('input[name="location_id"]:checked');
+                if (!selectedLocation) {
+                    if (scanErrorDiv) scanErrorDiv.textContent = 'กรุณาเลือกสถานที่ขายก่อนสแกนสินค้า';
+                    else alert('กรุณาเลือกสถานที่ขายก่อนสแกนสินค้า');
+                    this.focus(); return;
+                }
+                this.disabled = true;
+                try {
+                    const response = await fetch(`/api/products/lookup-by-scan/${encodeURIComponent(scanCode)}`);
+                    const productData = await response.json(); // Attempt to parse JSON regardless of response.ok for now
+
+                    if (response.ok && productData && productData.id) {
+                        addItemToSale(
+                            productData.id, productData.name, productData.sku,
+                            1, parseFloat(productData.price_b2c || 0), productData.barcode
+                        );
+                        this.value = '';
+                    } else {
+                        const detail = productData ? productData.detail : (await response.text());
+                        if (scanErrorDiv) scanErrorDiv.textContent = `ไม่พบสินค้าสำหรับรหัส: ${scanCode} (หรือเกิดข้อผิดพลาด: ${response.status})`;
+                        else alert(`ไม่พบสินค้าสำหรับรหัส: ${scanCode} (หรือเกิดข้อผิดพลาด: ${response.status})`);
+                        console.warn("Product not found or error:", response.status, detail);
+                    }
+                } catch (error) {
+                    if (scanErrorDiv) scanErrorDiv.textContent = "เกิดข้อผิดพลาดในการเชื่อมต่อ (Scan)";
+                    else alert("เกิดข้อผิดพลาดในการเชื่อมต่อ (Scan)");
+                    console.error("Network or other error during scan lookup:", error);
+                } finally {
+                    this.disabled = false; this.focus();
+                }
             }
         });
-        saleTotalElement.textContent = saleTotal.toFixed(2);
     }
 
-
-    saleItemsTableBody.addEventListener('click', function(event) {
-        if (event.target.classList.contains('remove-item-btn')) {
-            const button = event.target;
-            const itemRefToRemove = button.dataset.itemRef;
-            
-            const rowToRemove = saleItemsTableBody.querySelector(`tr[data-item-ref="${itemRefToRemove}"]`);
-            if (rowToRemove) rowToRemove.remove();
-
-            // Remove associated hidden inputs
-            saleItemsDataContainer.querySelectorAll(`input[data-item-ref="${itemRefToRemove}"]`).forEach(input => input.remove());
-            
-            updateGrandTotal();
-
-            if (saleItemsTableBody.querySelectorAll('tr:not(#no-items-row)').length === 0 && noItemsRow) {
-                noItemsRow.style.display = ''; // Show "No items" row if table is empty
-            }
-        }
-    });
-
-    posForm.addEventListener('submit', function(event) {
-        const selectedLocation = document.querySelector('input[name="location_id"]:checked');
-        if (!selectedLocation) {
-             alert('กรุณาเลือกสถานที่ขาย');
-             event.preventDefault();
-             return;
-        }
-        const hiddenItems = saleItemsDataContainer.querySelectorAll('input[name="item_product_id"]');
-        if (hiddenItems.length === 0) {
-            alert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการก่อนบันทึกการขาย');
-            event.preventDefault();
-        }
-        // The override_stock_check checkbox value will be submitted automatically
-    });
-
-    // Initial load for the first active category tab
-    document.addEventListener('DOMContentLoaded', function() {
-        const firstActiveCategoryTab = document.querySelector('.category-tabs .nav-link.active');
-        if (firstActiveCategoryTab) {
-            loadProductsForCategory(firstActiveCategoryTab.dataset.categoryId);
-        } else if (categoryTabs.length > 0) {
-            // Fallback: if no tab is active by default (e.g. after a full page reload on error),
-            // activate the first one and load its products.
-            // Note: Bootstrap 5 'shown.bs.tab' event might not fire if tab is already active on load.
-            // So, we explicitly call loadProductsForCategory.
-            const firstTab = categoryTabs[0];
-            if (firstTab) {
-                 // Manually make it active if nothing else is (this shouldn't be needed if Bootstrap handles it)
-                 // firstTab.classList.add('active'); // This might conflict with Bootstrap's own toggling
-                 // Bootstrap's Tab component should handle making it active.
-                 // Just ensure the products load.
-                 loadProductsForCategory(firstTab.dataset.categoryId);
-            }
-        }
-    });
+    posForm.addEventListener('submit', function(event) { /* ... (เหมือนเดิม) ... */ const selectedLocation = document.querySelector('input[name="location_id"]:checked'); if (!selectedLocation) { alert('กรุณาเลือกสถานที่ขาย'); event.preventDefault(); return; } const hiddenItems = saleItemsDataContainer.querySelectorAll('input[name="item_product_id"]'); if (hiddenItems.length === 0) { alert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการก่อนบันทึกการขาย'); event.preventDefault(); }});
+    document.addEventListener('DOMContentLoaded', function() { /* ... (เหมือนเดิม, รวมถึง scanInput.focus()) ... */ const firstActiveCategoryTab = document.querySelector('.category-tabs .nav-link.active'); if (firstActiveCategoryTab) { loadProductsForCategory(firstActiveCategoryTab.dataset.categoryId); } else if (categoryTabs.length > 0) { new bootstrap.Tab(categoryTabs[0]).show(); } if (scanInput) { scanInput.focus(); } });
 </script>
 {% endblock %}

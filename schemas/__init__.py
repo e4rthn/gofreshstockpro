@@ -1,6 +1,6 @@
 # schemas/__init__.py
 from .category import Category, CategoryBase, CategoryCreate
-from .product import Product, ProductBase, ProductCreate, ProductBasic
+from .product import Product, ProductBase, ProductCreate, ProductUpdate, ProductBasic
 from .location import Location, LocationBase, LocationCreate
 from .current_stock import CurrentStock
 from .inventory_transaction import (
@@ -15,7 +15,12 @@ from .stock_count import (
     StockCountItem, StockCountItemBase, StockCountItemCreate, StockCountItemUpdate,
     StockCountSessionInList
 )
-
-# --- ใช้ Absolute Import สำหรับ Enums จาก models ---
-from models import TransactionType, StockCountStatus
-# -------------------------------------------------
+# --- Add Dashboard Schemas ---
+from .dashboard import ( # Ensure the file name is dashboard.py
+    KpiSummarySchema,
+    SalesTrendItemSchema,
+    ProductPerformanceItemSchema,
+    CategoryDistributionItemSchema,
+    RecentTransactionItemSchema
+)
+# -----------------------------
