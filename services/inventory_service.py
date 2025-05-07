@@ -11,11 +11,16 @@ from models import (Product, Location, CurrentStock, InventoryTransaction,
 import schemas
 from schemas.inventory import StockInSchema, StockAdjustmentSchema, StockTransferSchema
 from schemas.stock_count import StockCountItemUpdate
-import models
+import models # Ensure models is imported if used like models.TransactionType etc.
+
 # Absolute Imports for other services
 from services import product_service, location_service
 
+# --- Existing functions (get_current_stock_record, record_stock_in, etc.) ---
+# ... (โค้ดฟังก์ชันอื่นๆ ของคุณอยู่ที่นี่ ไม่ต้องแก้ไข) ...
+
 def get_current_stock_record(db: Session, product_id: int, location_id: int) -> Optional[CurrentStock]:
+    """ ดึงข้อมูล CurrentStock record พร้อม lock for update """
     return db.query(CurrentStock).filter(
         CurrentStock.product_id == product_id,
         CurrentStock.location_id == location_id
@@ -60,44 +65,29 @@ def get_current_stock_summary(db: Session,
         joinedload(CurrentStock.location)
     )
 
-    # Apply filters first
     if category_id is not None:
         query = query.join(Product, CurrentStock.product_id == Product.id).filter(Product.category_id == category_id)
 
     if location_id is not None:
         query = query.filter(CurrentStock.location_id == location_id)
 
-    total_count = query.count() # Count after applying filters
+    total_count = query.count()
 
-    # Define order expressions
     order_expressions = []
-
-    # If viewing all locations (location_id is None), order by location name, then product name
     if location_id is None:
-        # Ensure Location is joined to order by Location.name
-        # A simple way to check if a join path is already present is harder with SQLAlchemy's internals.
-        # It's often safer to explicitly join if ordering by a related table's column.
-        # SQLAlchemy is usually smart about not creating truly redundant joins.
-        query = query.join(Location, CurrentStock.location_id == Location.id)
-        order_expressions.append(Location.name) # Order by location name
-    
-    # Then, order by product name.
-    # Ensure Product is joined if not already by category_id filter.
-    if not category_id : # If Product wasn't necessarily joined by category filter
-        # Check if Product is already part of the query (e.g. if joinedload makes it available for order_by path)
-        # For robustness, explicitly join if ordering by Product.name
-        # This checks if 'product' (the relationship attribute on CurrentStock) implies Product model.
-        # A more direct way if 'Product' model itself isn't directly in query._entities before this.
-        if not any(jc.mapper.class_ == Product for jc in getattr(query, '_join_entities', [])):
-             query = query.join(Product, CurrentStock.product_id == Product.id)
-    order_expressions.append(Product.name) # Order by product name
+         # Order by location name using the relationship
+        query = query.outerjoin(Location, CurrentStock.location_id == Location.id) # Ensure join if not implicitly done by options
+        order_expressions.append(Location.name)
+
+    # Order by product name using the relationship
+    query = query.outerjoin(Product, CurrentStock.product_id == Product.id) # Ensure join if not implicitly done by options
+    order_expressions.append(Product.name)
+
 
     stock_data = query.order_by(*order_expressions).offset(skip).limit(limit).all()
     return {"items": stock_data, "total_count": total_count}
 
 
-# --- (ส่วนที่เหลือของ inventory_service.py เช่น record_stock_adjustment, record_stock_deduction, etc. ให้คงเดิมตามที่คุณมีและทำงานได้ดีแล้ว) ---
-# ... (rest of your inventory_service.py file)
 def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema, allow_negative_stock_for_count: bool = False) -> InventoryTransaction:
     if adjustment_data.quantity_change == 0:
         raise ValueError("จำนวนที่เปลี่ยนแปลงต้องไม่เป็นศูนย์")
@@ -114,7 +104,7 @@ def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema,
         current_quantity_on_hand = current_stock.quantity if current_stock else 0
 
         if adjustment_data.quantity_change < 0:
-            if not allow_negative_stock_for_count:
+            if not allow_negative_stock_for_count: # Check the flag
                 if current_quantity_on_hand < abs(adjustment_data.quantity_change):
                     raise ValueError(
                         f"สต็อกไม่เพียงพอสำหรับการปรับลด ปัจจุบัน: {current_quantity_on_hand}, "
@@ -139,15 +129,12 @@ def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema,
         if current_stock:
             current_stock.quantity += adjustment_data.quantity_change
         else:
-            if adjustment_data.quantity_change > 0 or allow_negative_stock_for_count:
-                current_stock = CurrentStock(
-                    product_id=adjustment_data.product_id,
-                    location_id=adjustment_data.location_id,
-                    quantity=adjustment_data.quantity_change
-                )
-                db.add(current_stock)
-            else:
-                raise ValueError("ไม่สามารถปรับปรุงยอดติดลบสำหรับสต็อกที่ยังไม่มีได้ (ยกเว้นกรณีมาจากการนับสต็อก)")
+             current_stock = CurrentStock(
+                product_id=adjustment_data.product_id,
+                location_id=adjustment_data.location_id,
+                quantity=adjustment_data.quantity_change
+            )
+             db.add(current_stock)
 
         db.commit()
         db.refresh(transaction)
@@ -165,23 +152,18 @@ def record_stock_adjustment(db: Session, adjustment_data: StockAdjustmentSchema,
 
 def record_stock_deduction(
     db: Session,
-    transaction_type: TransactionType, # <<--- แก้ไข: ใช้ TransactionType โดยตรง (ไม่ต้องมี models.)
+    transaction_type: TransactionType,
     product_id: int,
     location_id: int,
     quantity: int,
     related_transaction_id: Optional[int] = None,
     notes: Optional[str] = None,
     cost_per_unit: Optional[float] = None
-) -> InventoryTransaction: # <<--- แก้ไข: ใช้ InventoryTransaction โดยตรง
+) -> InventoryTransaction:
     if quantity <= 0:
         raise ValueError("Quantity for stock deduction must be a positive value.")
 
-    # product = product_service.get_product(db, product_id=product_id) # การตรวจสอบนี้อาจจะทำแล้วใน service ที่เรียก
-    # if not product:
-    #     raise ValueError(f"Product ID {product_id} not found for stock deduction.")
-
-    # สร้าง InventoryTransaction instance
-    transaction = InventoryTransaction( # <<--- แก้ไข: ใช้ InventoryTransaction โดยตรง
+    transaction = InventoryTransaction(
         transaction_type=transaction_type,
         product_id=product_id,
         location_id=location_id,
@@ -196,14 +178,12 @@ def record_stock_deduction(
     if current_stock_record:
         current_stock_record.quantity -= abs(quantity)
     else:
-        # ถ้ายังไม่มี CurrentStock record, สร้างใหม่ (สต็อกจะเริ่มจากค่าติดลบนี้)
-        current_stock_record = CurrentStock( # <<--- แก้ไข: ใช้ CurrentStock โดยตรง
+        current_stock_record = CurrentStock(
             product_id=product_id,
             location_id=location_id,
             quantity = -abs(quantity)
         )
         db.add(current_stock_record)
-    # การ commit จะถูกจัดการโดยฟังก์ชันที่เรียกใช้ (เช่น record_sale)
     return transaction
 
 def get_near_expiry_transactions(
@@ -312,16 +292,20 @@ def record_stock_transfer(
 def update_counted_quantity(db: Session, item_id: int, item_update_data: StockCountItemUpdate) -> StockCountItem:
     db_item = db.query(StockCountItem).options(
         joinedload(StockCountItem.session)
-    ).filter(StockCountItem.id == item_id).first()
+    ).filter(StockCountItem.id == item_id).with_for_update().first()
 
     if not db_item:
         raise ValueError(f"ไม่พบรายการตรวจนับ รหัส {item_id}")
 
-    if db_item.session.status == StockCountStatus.OPEN:
-        db_item.session.status = StockCountStatus.COUNTING
-    elif db_item.session.status != StockCountStatus.COUNTING:
+    session = db.query(StockCountSession).filter(StockCountSession.id == db_item.session_id).with_for_update().first()
+    if not session:
+         raise ValueError(f"Session associated with item {item_id} not found.")
+
+    if session.status == StockCountStatus.OPEN:
+        session.status = StockCountStatus.COUNTING
+    elif session.status != StockCountStatus.COUNTING:
         raise ValueError(
-            f"ไม่สามารถบันทึกยอดนับในรอบนับที่สถานะ '{db_item.session.status.value}' ได้ (ต้องเป็น OPEN หรือ COUNTING)"
+            f"ไม่สามารถบันทึกยอดนับในรอบนับที่สถานะ '{session.status.value}' ได้ (ต้องเป็น OPEN หรือ COUNTING)"
         )
 
     db_item.counted_quantity = item_update_data.counted_quantity
@@ -330,8 +314,7 @@ def update_counted_quantity(db: Session, item_id: int, item_update_data: StockCo
     try:
         db.commit()
         db.refresh(db_item)
-        if db_item.session:
-            db.refresh(db_item.session)
+        db.refresh(session)
     except Exception as e:
         db.rollback()
         raise ValueError(f"DB error updating count for item {item_id}: {str(e)}") from e
@@ -426,3 +409,55 @@ def cancel_stock_count_session(db: Session, session_id: int) -> StockCountSessio
 
     print(f"Stock Count Session {session_id} canceled.")
     return session
+
+# --- Negative Stock Report Function (Updated ORDER BY) ---
+def get_negative_stock_items(
+    db: Session,
+    location_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> Dict[str, Any]:
+    """
+    ดึงรายการสินค้าที่มีสต็อกติดลบ (quantity < 0) พร้อมข้อมูลที่เกี่ยวข้อง
+    รองรับการกรองตามสถานที่และหมวดหมู่ และการแบ่งหน้า
+    """
+    query = db.query(models.CurrentStock).options(
+        joinedload(models.CurrentStock.product).joinedload(models.Product.category),
+        joinedload(models.CurrentStock.location)
+    ).filter(models.CurrentStock.quantity < 0)
+
+    if location_id is not None:
+        query = query.filter(models.CurrentStock.location_id == location_id)
+
+    if category_id is not None:
+        query = query.join(models.Product, models.CurrentStock.product_id == models.Product.id)\
+                     .filter(models.Product.category_id == category_id)
+
+    # --- Counting ---
+    try:
+        total_count = query.count()
+    except Exception as e:
+        print(f"Warning: Complex count failed ({e}), attempting simpler count.")
+        count_query = db.query(func.count(models.CurrentStock.id)).filter(models.CurrentStock.quantity < 0)
+        if location_id is not None:
+             count_query = count_query.filter(models.CurrentStock.location_id == location_id)
+        if category_id is not None:
+            count_query = count_query.join(models.Product, models.CurrentStock.product_id == models.Product.id)\
+                                    .filter(models.Product.category_id == category_id)
+        total_count = count_query.scalar() or 0
+
+    # --- Ordering and Pagination (Corrected ORDER BY) ---
+    # Order by location name (via relationship), then product name (via relationship)
+    items: List[models.CurrentStock] = query.order_by(
+                                            models.Location.name,  # Order using the joined Location model's name
+                                            models.Product.name    # Order using the joined Product model's name
+                                         )\
+                                         .offset(skip).limit(limit).all()
+    # Note: Ensure Location and Product are properly joined either via `options(joinedload(...))`
+    # or explicit `.join()` if ordering based on them. The joinedload should handle this.
+
+    return {"items": items, "total_count": total_count}
+# -------------------------------------------
+
+# ... (Rest of your inventory_service.py, if any) ...

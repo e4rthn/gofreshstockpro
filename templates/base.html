@@ -20,6 +20,15 @@
         .navbar-brand { font-weight: 700; }
         .nav-link { font-size: 0.95rem; }
         .dropdown-item { font-size: 0.9rem; }
+        /* Add active state style for dropdown items */
+        .dropdown-item.active, .dropdown-item:active {
+            color: #fff;
+            text-decoration: none;
+            background-color: var(--bs-primary); /* Use Bootstrap primary color */
+        }
+        /* Ensure dropdown menus have sufficient z-index if overlapping occurs */
+        .dropdown-menu { z-index: 1021; } /* Bootstrap's default is 1000, navbar is 1030 */
+
     </style>
     {% block head_extra %}{% endblock %}
 </head>
@@ -37,45 +46,80 @@
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         {# --- Dashboard Link --- #}
                         <li class="nav-item">
-                             <a class="nav-link {% if request.url.path.startswith('/ui/dashboard') %}active{% endif %}"
+                             <a class="nav-link {% if request.url.path == request.app.url_path_for('ui_dashboard') %}active{% endif %}"
                                 href="{{ request.app.url_path_for('ui_dashboard') }}">
                                  <i class="bi bi-speedometer2 me-1"></i>Dashboard
                              </a>
                          </li>
                         {# -------------------- #}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.url.path.startswith('/ui/pos') %}active{% endif %}" href="{{ request.app.url_path_for('ui_show_pos_form') }}">
+                            {# Adjusted active check for POS #}
+                            <a class="nav-link {% if request.url.path == request.app.url_path_for('ui_show_pos_form') %}active{% endif %}"
+                               href="{{ request.app.url_path_for('ui_show_pos_form') }}">
                                 <i class="bi bi-cart-plus me-1"></i>ขาย (POS)
                             </a>
                         </li>
                          <li class="nav-item dropdown">
-                             <a class="nav-link dropdown-toggle {% if request.url.path.startswith('/ui/inventory') or request.url.path.startswith('/ui/stock-counts') %}active{% endif %}" href="#" id="navbarDropdownInventory" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <i class="bi bi-boxes me-1"></i>จัดการสต็อก </a>
+                             {# Adjusted active check for Inventory Management #}
+                             <a class="nav-link dropdown-toggle
+                                {% if request.url.path.startswith('/ui/inventory') or request.url.path.startswith('/ui/stock-counts') %}active{% endif %}"
+                                href="#" id="navbarDropdownInventory" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-boxes me-1"></i>จัดการสต็อก
+                            </a>
                              <ul class="dropdown-menu" aria-labelledby="navbarDropdownInventory">
-                                 <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_view_inventory_summary') }}">สรุปสต็อกคงคลัง</a></li>
-                                 <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_show_stock_in_form') }}">รับสินค้าเข้า</a></li>
-                                 <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_show_adjustment_form') }}">ปรับปรุงสต็อก</a></li>
-                                 <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_show_transfer_form') }}">โอนย้ายสต็อก</a></li>
+                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_view_inventory_summary') %}active{% endif %}"
+                                        href="{{ request.app.url_path_for('ui_view_inventory_summary') }}">สรุปสต็อกคงคลัง</a></li>
+                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_show_stock_in_form') %}active{% endif %}"
+                                        href="{{ request.app.url_path_for('ui_show_stock_in_form') }}">รับสินค้าเข้า</a></li>
+                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_show_adjustment_form') %}active{% endif %}"
+                                        href="{{ request.app.url_path_for('ui_show_adjustment_form') }}">ปรับปรุงสต็อก</a></li>
+                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_show_transfer_form') %}active{% endif %}"
+                                        href="{{ request.app.url_path_for('ui_show_transfer_form') }}">โอนย้ายสต็อก</a></li>
                                  <li><hr class="dropdown-divider"></li>
-                                 <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_list_stock_count_sessions') }}">ตรวจนับสต็อก</a></li>
+                                 <li><a class="dropdown-item {% if request.url.path.startswith(request.app.url_path_for('ui_list_stock_count_sessions')) %}active{% endif %}"
+                                        href="{{ request.app.url_path_for('ui_list_stock_count_sessions') }}">ตรวจนับสต็อก</a></li>
                              </ul>
                          </li>
                          <li class="nav-item dropdown">
-                              <a class="nav-link dropdown-toggle {% if request.url.path.startswith('/ui/reports') or request.url.path.startswith('/ui/sales/report') or request.url.path.startswith('/ui/inventory/near-expiry') %}active{% endif %}" href="#" id="navbarDropdownReports" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <i class="bi bi-file-earmark-bar-graph me-1"></i>รายงาน </a>
+                              {# Adjusted active check for Reports #}
+                              <a class="nav-link dropdown-toggle
+                                 {% set reports_base_path = '/ui/' %} {# Common prefix for most reports #}
+                                 {% if request.url.path == request.app.url_path_for('ui_sales_report') or
+                                      request.url.path == request.app.url_path_for('ui_near_expiry_report') or
+                                      request.url.path == request.app.url_path_for('ui_negative_stock_report') %}active{% endif %}"
+                                 href="#" id="navbarDropdownReports" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                 <i class="bi bi-file-earmark-bar-graph me-1"></i>รายงาน
+                              </a>
                               <ul class="dropdown-menu" aria-labelledby="navbarDropdownReports">
-                                  <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_sales_report') }}">รายงานการขาย</a></li>
-                                  <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_near_expiry_report') }}">สินค้าใกล้หมดอายุ</a></li>
-                                  {# Add link to negative stock report if route name is defined #}
-                                  {% if 'ui_negative_stock_report' in request.app.routes_by_name %}
-                                  <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_negative_stock_report') }}">สต็อกติดลบ</a></li>
-                                  {% endif %}
+                                  <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_sales_report') %}active{% endif %}"
+                                         href="{{ request.app.url_path_for('ui_sales_report') }}">รายงานการขาย</a></li>
+                                  <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_near_expiry_report') %}active{% endif %}"
+                                         href="{{ request.app.url_path_for('ui_near_expiry_report') }}">สินค้าใกล้หมดอายุ</a></li>
+                                  {# --- Link to Negative Stock Report --- #}
+                                  <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_negative_stock_report') %}active{% endif %}"
+                                         href="{{ request.app.url_path_for('ui_negative_stock_report') }}">
+                                         <i class="bi bi-exclamation-diamond-fill text-danger me-1"></i>สต็อกติดลบ
+                                      </a>
+                                  </li>
+                                  {# ----------------------------------- #}
                               </ul>
                           </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if request.url.path.startswith('/ui/categories') or request.url.path.startswith('/ui/products') or request.url.path.startswith('/ui/locations') %}active{% endif %}" href="#" id="navbarDropdownDataManagement" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <i class="bi bi-database-gear me-1"></i>ข้อมูลหลัก </a>
+                             {# Adjusted active check for Master Data #}
+                            <a class="nav-link dropdown-toggle
+                               {% if request.url.path.startswith('/ui/categories') or
+                                    request.url.path.startswith('/ui/products') or
+                                    request.url.path.startswith('/ui/locations') %}active{% endif %}"
+                               href="#" id="navbarDropdownDataManagement" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                               <i class="bi bi-database-gear me-1"></i>ข้อมูลหลัก
+                           </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownDataManagement">
-                                <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_read_all_categories') }}">หมวดหมู่สินค้า</a></li>
-                                <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_read_all_products') }}">สินค้า</a></li>
-                                <li><a class="dropdown-item" href="{{ request.app.url_path_for('ui_read_all_locations') }}">สถานที่จัดเก็บ</a></li>
+                                <li><a class="dropdown-item {% if request.url.path.startswith('/ui/categories') %}active{% endif %}"
+                                       href="{{ request.app.url_path_for('ui_read_all_categories') }}">หมวดหมู่สินค้า</a></li>
+                                <li><a class="dropdown-item {% if request.url.path.startswith('/ui/products') %}active{% endif %}"
+                                       href="{{ request.app.url_path_for('ui_read_all_products') }}">สินค้า</a></li>
+                                <li><a class="dropdown-item {% if request.url.path.startswith('/ui/locations') %}active{% endif %}"
+                                       href="{{ request.app.url_path_for('ui_read_all_locations') }}">สถานที่จัดเก็บ</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -89,7 +133,7 @@
 
         <footer class="footer mt-auto py-3 bg-light text-center text-muted border-top">
             <div class="container">
-                <p class="mb-0 small">&copy; {{ current_year }} GoFresh StockPro</p>
+                 <p class="mb-0 small">&copy; {{ current_year }} GoFresh StockPro</p>
             </div>
         </footer>
     </div>

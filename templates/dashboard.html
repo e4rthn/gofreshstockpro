@@ -61,6 +61,25 @@
     .quick-list-table td a { text-decoration: none; color: var(--bs-body-color); }
     .quick-list-table td a:hover { text-decoration: underline; color: var(--bs-primary); }
     .badge { font-size: 0.75em; padding: 0.3em 0.5em;} /* Slightly larger badge */
+
+    /* Style for active/inactive buttons */
+    #catDistCountBtn.active, #catDistValueBtn.active {
+        /* Define active styles, e.g., darker background, different border */
+        background-color: var(--bs-primary);
+        color: white;
+        border-color: var(--bs-primary);
+    }
+    #catDistCountBtn:not(.active), #catDistValueBtn:not(.active) {
+        /* Define inactive styles */
+        background-color: var(--bs-light);
+        color: var(--bs-dark);
+        border-color: var(--bs-secondary);
+    }
+    #catDistCountBtn:hover:not(.active), #catDistValueBtn:hover:not(.active) {
+         background-color: var(--bs-secondary-bg);
+    }
+
+
 </style>
 {% endblock %}
 
@@ -108,9 +127,8 @@
                      <div class="col-auto"> <i class="bi bi-exclamation-triangle-fill kpi-icon text-gray-300"></i> </div>
                  </div>
              </div>
-             {# Link to negative stock report (assuming you create this route/page later) #}
-             {# <a href="{{ request.app.url_path_for('ui_negative_stock_report') if 'ui_negative_stock_report' in request.app.routes_by_name else '#' }}" class="stretched-link" title="ดูรายงานสต็อกติดลบ"></a> #}
-             <a href="#" class="stretched-link" title="ดูรายงานสต็อกติดลบ (ยังไม่สร้าง)"></a> {# Placeholder link #}
+             {# Link to negative stock report #}
+             <a href="{{ request.app.url_path_for('ui_negative_stock_report') if 'ui_negative_stock_report' in request.app.routes_by_name else '#' }}" class="stretched-link" title="ดูรายงานสต็อกติดลบ"></a>
          </div>
      </div>
      <div class="col-xl-3 col-md-6 mb-4">
@@ -129,8 +147,9 @@
      </div>
 </div>
 
-{# --- แถวแสดงกราฟ --- #}
+{# --- แถวแสดงกราฟ Sales Trend และ Top Products --- #}
 <div class="row">
+    {# Sales Trend Chart #}
     <div class="col-lg-7 mb-4">
         <div class="card shadow mb-4 chart-card">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -143,6 +162,8 @@
             </div>
         </div>
     </div>
+
+    {# Top Products Chart #}
     <div class="col-lg-5 mb-4">
         <div class="card shadow mb-4 chart-card">
             <div class="card-header py-3">
@@ -156,28 +177,56 @@
         </div>
     </div>
 </div>
-{# --- แถวแสดงตารางข้อมูลด่วน --- #}
+
+{# --- แถวใหม่สำหรับ Category Distribution และตาราง Quick Lists --- #}
 <div class="row">
-     <div class="col-lg-6 mb-4">
-         <div class="card shadow">
+    {# Category Distribution Chart (เพิ่มใหม่) #}
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4 chart-card">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">สัดส่วนสต็อกตามหมวดหมู่</h6>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-secondary active" id="catDistCountBtn" onclick="renderCategoryDistributionChart(false)">ตามจำนวน SKU</button>
+                    <button class="btn btn-outline-secondary" id="catDistValueBtn" onclick="renderCategoryDistributionChart(true)">ตามมูลค่า</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="category-distribution-chart">
+                    <div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Low Stock Items #}
+    <div class="col-lg-6 mb-4">
+         <div class="card shadow h-100">
              <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-primary">สินค้าสต็อกเหลือน้อย (<= 5 ชิ้น)</h6>
+                {# Optional: Link to full low stock report if you create one #}
                 {# <a href="#" class="btn btn-sm btn-outline-secondary">ดูทั้งหมด</a> #}
              </div>
              <div class="card-body p-0">
-                  <div id="low-stock-table-container" class="table-responsive">
+                  <div id="low-stock-table-container" class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                        <div class="loading-placeholder p-3">กำลังโหลด...</div>
                   </div>
              </div>
          </div>
      </div>
-     <div class="col-lg-6 mb-4">
+</div>
+
+{# --- แถวสำหรับ Recent Transactions --- #}
+<div class="row">
+      {# Recent Transactions #}
+      <div class="col-lg-12 mb-4">
           <div class="card shadow">
               <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-primary">รายการเคลื่อนไหวล่าสุด</h6>
+                 {# Optional: Link to full transaction history page #}
+                 {# <a href="#" class="btn btn-sm btn-outline-secondary">ดูทั้งหมด</a> #}
               </div>
               <div class="card-body p-0">
-                   <div id="recent-transactions-table-container" class="table-responsive">
+                   <div id="recent-transactions-table-container" class="table-responsive" style="max-height: 350px; overflow-y: auto;">
                        <div class="loading-placeholder p-3">กำลังโหลด...</div>
                    </div>
               </div>
@@ -212,7 +261,7 @@
             expiry: document.getElementById('kpi-near-expiry')
         };
         try {
-            const response = await fetch('/api/dashboard/kpis'); // Ensure API path is correct
+            const response = await fetch('/api/dashboard/kpis');
             if (!response.ok) throw new Error(`KPI API Error: ${response.status}`);
             const data = await response.json();
 
@@ -224,7 +273,7 @@
         } catch (error) {
             console.error("Error fetching KPI data:", error);
             for (const key in kpiElements) {
-                if (kpiElements[key]) kpiElements[key].textContent = "Error";
+                if (kpiElements[key]) kpiElements[key].textContent = "N/A"; // Show N/A on error
             }
         }
     }
@@ -235,144 +284,226 @@
         try {
             const response = await fetch('/api/dashboard/sales-trend-weekly');
             if (!response.ok) throw new Error(`Sales Trend API Error: ${response.status}`);
-            const apiData = await response.json(); if (!Array.isArray(apiData)) throw new Error("Invalid data format");
+            const apiData = await response.json(); if (!Array.isArray(apiData)) throw new Error("Invalid data format for Sales Trend");
+
+            if (apiData.length === 0) {
+                chartElement.innerHTML = '<p class="text-center text-muted small p-3">ไม่มีข้อมูลแนวโน้มยอดขาย</p>';
+                return;
+            }
+
             const chartSeries = [{ name: 'ยอดขาย', data: apiData.map(item => parseFloat(item.total_sales || 0)) }];
             const chartCategories = apiData.map(item => formatDateShort(item.date));
             var options = {
                 chart: { type: 'area', height: 300, toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } }, zoom: { enabled: false } },
                 series: chartSeries,
-                xaxis: { categories: chartCategories, labels: { rotate: -45, style: { fontSize: '10px' }, trim: true } },
+                xaxis: { categories: chartCategories, labels: { rotate: -45, style: { fontSize: '10px' }, trim: true, formatter: function (value) { return value; } } },
                 yaxis: { labels: { formatter: function (val) { return val.toLocaleString('th-TH'); } } },
                 stroke: { curve: 'smooth', width: 2 }, fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.6, opacityTo: 0.2, stops: [0, 100] } },
-                tooltip: { y: { formatter: function (val) { return formatCurrency(val); } }, x: { formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? new Date(apiData[dataPointIndex].date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric'}) : val; } } },
+                tooltip: { y: { formatter: function (val) { return formatCurrency(val); } }, x: { formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? new Date(apiData[dataPointIndex].date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric'}) : val; } } },
                 dataLabels: { enabled: false }, markers: { size: 0 }, grid: { borderColor: '#e7e7e7', row: { colors: ['#f3f3f3', 'transparent'], opacity: 0.5 } },
+                noData: { text: 'ไม่มีข้อมูลแนวโน้มยอดขาย', align: 'center', verticalAlign: 'middle', style: { fontSize: '14px', color: '#6c757d'} }
             };
             chartElement.innerHTML = ''; var chart = new ApexCharts(chartElement, options); chart.render();
         } catch (error) { console.error("Error rendering sales trend chart:", error); if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดกราฟยอดขายได้</p>'; }
     }
 
     async function renderTopProductsChart() {
-        const chartElement = document.querySelector("#top-products-chart"); 
-        if (!chartElement) return; 
+        const chartElement = document.querySelector("#top-products-chart");
+        if (!chartElement) return;
         chartElement.innerHTML = '<div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
         try {
-            const response = await fetch('/api/dashboard/top-products-weekly'); 
+            const response = await fetch('/api/dashboard/top-products-weekly?limit=5');
             if (!response.ok) throw new Error(`Top Products API Error: ${response.status}`);
-            const apiData = await response.json(); 
-            if (!Array.isArray(apiData)) throw new Error("Invalid data format");
+            const apiData = await response.json();
+            if (!Array.isArray(apiData)) throw new Error("Invalid data format for Top Products");
 
-            if (apiData.length === 0) { 
-                chartElement.innerHTML = '<p class="text-center text-muted small p-3">ไม่มีข้อมูลสินค้าขายดีในช่วงนี้</p>'; 
-                return; 
+            if (apiData.length === 0) {
+                chartElement.innerHTML = '<p class="text-center text-muted small p-3">ไม่มีข้อมูลสินค้าขายดีในช่วงนี้</p>';
+                return;
             }
-            
-            apiData.sort((a, b) => b.value - a.value); // Sort data just in case
-            
+            apiData.sort((a, b) => b.value - a.value);
             const chartSeries = [{ name: 'จำนวนที่ขายได้', data: apiData.map(item => item.value) }];
-            const chartCategories = apiData.map(item => `${item.product_name}`); // Shorter labels
-
+            const chartCategories = apiData.map(item => item.product_name);
             var options = {
                 chart: { type: 'bar', height: 300, toolbar: { show: false } },
                 series: chartSeries,
-                xaxis: { categories: chartCategories, labels: { show: true, style: { fontSize: '10px'}, trim: true, }, tooltip: { enabled: true, formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? `SKU: ${apiData[dataPointIndex].product_sku}` : val; } } }, // Show SKU on hover
-                yaxis: { title: { text: 'จำนวน (ชิ้น)' } },
-                plotOptions: { bar: { horizontal: true, barHeight: '50%', borderRadius: 3 } },
-                dataLabels: { enabled: true, formatter: function(val) { return formatNumber(val); }, offsetX: 15, style: { colors: ['#333'] }, background: { enabled: true, foreColor: '#fff', padding: 4, borderRadius: 2, borderWidth: 1, borderColor: '#ddd', opacity: 0.9 } },
-                tooltip: { 
-                    y: { 
-                        title: { formatter: function (seriesName) { return seriesName; } },
-                        formatter: function (val) { return formatNumber(val) + " ชิ้น"; } // Format tooltip value
-                    } 
+                plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 3, dataLabels: { position: 'top' } } },
+                colors: ['#198754'],
+                dataLabels: {
+                    enabled: true, offsetX: 25, style: { fontSize: '10px', colors: ['#333'] },
+                    formatter: function(val) { return formatNumber(val); }
                 },
-                colors: ['#198754'] // Success color
+                xaxis: {
+                    categories: chartCategories, title: { text: 'จำนวน (ชิ้น)', style: { fontSize: '10px' } },
+                    labels: { formatter: function (val) { return formatNumber(val); }, style: { fontSize: '10px' } }
+                },
+                yaxis: {
+                    labels: {
+                        show: true, align: 'right', style: { fontSize: '10px' },
+                        formatter: function(val) { return val.length > 20 ? val.substring(0, 18) + "..." : val; }
+                    }
+                },
+                tooltip: {
+                    y: {
+                        title: { formatter: function () { return 'จำนวนขาย:' } },
+                        formatter: function (val, { dataPointIndex }) {
+                            const product = apiData[dataPointIndex];
+                            return `${formatNumber(val)} ชิ้น (SKU: ${product.product_sku})`;
+                        }
+                    }
+                },
+                noData: { text: 'ไม่มีข้อมูลสินค้าขายดี', align: 'center', verticalAlign: 'middle', offsetX: 0, offsetY: 0, style: { fontSize: '14px', color: '#6c757d' } }
             };
-            chartElement.innerHTML = ''; 
-            var chart = new ApexCharts(chartElement, options); 
-            chart.render();
-        } catch (error) { 
-            console.error("Error rendering top products chart:", error); // Log the actual error object
-            if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดกราฟสินค้าขายดีได้</p>'; 
+            chartElement.innerHTML = '';
+            var chart = new ApexCharts(chartElement, options); chart.render();
+        } catch (error) {
+            console.error("Error rendering top products chart:", error);
+            if (chartElement) chartElement.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดกราฟสินค้าขายดีได้</p>';
+        }
+    }
+
+    let categoryChartInstance = null;
+    async function renderCategoryDistributionChart(valueBased = false) {
+        const chartElement = document.querySelector("#category-distribution-chart");
+        const countBtn = document.getElementById("catDistCountBtn");
+        const valueBtn = document.getElementById("catDistValueBtn");
+        if (!chartElement) return;
+        chartElement.innerHTML = '<div class="loading-placeholder"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        if (countBtn && valueBtn) {
+            if (valueBased) { countBtn.classList.remove('active'); valueBtn.classList.add('active'); }
+            else { countBtn.classList.add('active'); valueBtn.classList.remove('active'); }
+        }
+        try {
+            const apiUrl = `/api/dashboard/category-distribution?value_based=${valueBased}`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`Category Distribution API Error: ${response.status}`);
+            const apiData = await response.json();
+            if (!Array.isArray(apiData)) throw new Error("Invalid data format for Category Distribution");
+
+            if (apiData.length === 0) {
+                chartElement.innerHTML = `<p class="text-center text-muted small p-3">ไม่มีข้อมูลสัดส่วนหมวดหมู่ ${valueBased ? '(ตามมูลค่า)' : '(ตามจำนวน SKU)'}</p>`;
+                return;
+            }
+            const chartSeries = apiData.map(item => item.value);
+            const chartLabels = apiData.map(item => item.category_name);
+            var options = {
+                chart: { type: 'donut', height: 320, toolbar: { show: true, tools: { download: true } } },
+                series: chartSeries, labels: chartLabels,
+                responsive: [{ breakpoint: 480, options: { chart: { width: 200 }, legend: { position: 'bottom' } } }],
+                legend: { position: 'right', offsetY: 0, height: 230, itemMargin: { vertical: 3 } },
+                tooltip: {
+                    y: { formatter: function(val) { return valueBased ? formatCurrency(val, false) + " บาท" : formatNumber(val) + " SKU(s)"; } }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val, opts) {
+                        const seriesValue = opts.w.globals.series[opts.seriesIndex];
+                        return `${opts.w.globals.labels[opts.seriesIndex]}: ${parseFloat(val).toFixed(1)}% (${valueBased ? formatCurrency(seriesValue, false) : formatNumber(seriesValue)})`;
+                    },
+                    style: { fontSize: '9px' }, dropShadow: { enabled: false }
+                },
+                noData: { text: `ไม่มีข้อมูลสัดส่วนหมวดหมู่ ${valueBased ? '(ตามมูลค่า)' : '(ตามจำนวน SKU)'}`, style: { fontSize: '14px', color: '#6c757d' } }
+            };
+            chartElement.innerHTML = '';
+            if (categoryChartInstance) categoryChartInstance.destroy();
+            categoryChartInstance = new ApexCharts(chartElement, options);
+            categoryChartInstance.render();
+        } catch (error) {
+            console.error("Error rendering category distribution chart:", error);
+            if (chartElement) chartElement.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดกราฟสัดส่วนหมวดหมู่ได้</p>';
         }
     }
 
     async function fetchAndDisplayLowStock() {
-        const container = document.getElementById('low-stock-table-container'); if (!container) return;
+        const container = document.getElementById('low-stock-table-container');
+        if (!container) return;
         container.innerHTML = '<div class="loading-placeholder p-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
         try {
-            const response = await fetch('/api/dashboard/low-stock-items?limit=5');
+            const response = await fetch('/api/dashboard/low-stock-items?limit=7&threshold=5');
             if (!response.ok) throw new Error(`Low Stock API Error: ${response.status}`);
-            const items = await response.json(); if (!Array.isArray(items)) throw new Error("Invalid data format");
+            const items = await response.json();
+            if (!Array.isArray(items)) throw new Error("Invalid data format for Low Stock");
 
-            if (items.length === 0) { container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีสินค้าสต็อกเหลือน้อย</p>'; return; }
-            
-            let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>'; // Added table-hover
+            if (items.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีสินค้าสต็อกเหลือน้อย (ต่ำกว่าหรือเท่ากับ 5)</p>';
+                return;
+            }
+            let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>';
             items.forEach(item => {
-                // Make sure product_id is available for the link
-                 const editUrl = `/ui/products/edit/${item.product_id}`; // Construct URL directly
-                tableHtml += `<tr>
-                                <td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} (${item.product_sku})</a></td>
-                                <td class="text-end"><span class="badge bg-warning text-dark">${formatNumber(item.value)}</span></td>
-                              </tr>`;
+                const editUrl = `/ui/products/edit/${item.product_id}`;
+                tableHtml += `
+                    <tr>
+                        <td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} <small class="text-muted">(${item.product_sku})</small></a></td>
+                        <td class="text-end"><span class="badge ${item.value <= 0 ? 'bg-danger' : (item.value <= 5 ? 'bg-warning text-dark' : 'bg-info text-dark')}">${formatNumber(item.value)}</span></td>
+                    </tr>`;
             });
             tableHtml += '</tbody></table>';
             container.innerHTML = tableHtml;
-
-        } catch (error) { console.error("Error fetching low stock data:", error); if(container) container.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดข้อมูลสต็อกน้อยได้</p>'; }
+        } catch (error) {
+            console.error("Error fetching low stock data:", error);
+            if (container) container.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดข้อมูลสต็อกน้อยได้</p>';
+        }
     }
 
     async function fetchAndDisplayRecentTransactions() {
-        const container = document.getElementById('recent-transactions-table-container'); if (!container) return;
+        const container = document.getElementById('recent-transactions-table-container');
+        if (!container) return;
         container.innerHTML = '<div class="loading-placeholder p-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
         try {
-            const response = await fetch('/api/dashboard/recent-transactions?limit=5');
-            if (!response.ok) throw new Error(`Recent Tx API Error: ${response.status}`);
-            const transactions = await response.json(); if (!Array.isArray(transactions)) throw new Error("Invalid data format");
+            const response = await fetch('/api/dashboard/recent-transactions?limit=7');
+            if (!response.ok) throw new Error(`Recent Transactions API Error: ${response.status}`);
+            const transactions = await response.json();
+            if (!Array.isArray(transactions)) throw new Error("Invalid data format for Recent Transactions");
 
-            if (transactions.length === 0) { container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีรายการเคลื่อนไหวล่าสุด</p>'; return; }
-
-             let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>';
-             transactions.forEach(tx => {
-                 let qtyClass = tx.quantity_change > 0 ? 'text-success' : 'text-danger';
-                 let typeBadge = '';
-                 if(tx.transaction_type === 'STOCK_IN') typeBadge = '<span class="badge bg-success-subtle text-success-emphasis rounded-pill">รับเข้า</span>';
-                 else if (tx.transaction_type === 'SALE') typeBadge = '<span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">ขาย</span>'; // Changed color
-                 else if (tx.transaction_type.includes('ADJUSTMENT')) typeBadge = '<span class="badge bg-warning-subtle text-warning-emphasis rounded-pill">ปรับปรุง</span>';
-                 else if (tx.transaction_type.includes('TRANSFER')) typeBadge = '<span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">โอนย้าย</span>';
-                 else typeBadge = `<span class="badge bg-light text-dark rounded-pill">${tx.transaction_type}</span>`;
-
-                 tableHtml += `
-                     <tr>
-                         <td>
-                             ${typeBadge}
-                             <strong class="ms-1">${tx.product_name}</strong>
-                             <small class="text-muted d-block ms-1">${tx.location_name} @ ${formatDateTime(tx.transaction_date)}</small>
-                             ${tx.notes ? `<small class="text-muted d-block ms-1 fst-italic">Note: ${tx.notes.substring(0,50)}${tx.notes.length > 50 ? '...' : ''}</small>` : ''}
-                         </td>
-                         <td class="text-end ${qtyClass} fw-bold">${tx.quantity_change > 0 ? '+' : ''}${formatNumber(tx.quantity_change)}</td>
-                     </tr>`;
-             });
-             tableHtml += '</tbody></table>';
-             container.innerHTML = tableHtml;
-
-        } catch (error) { console.error("Error fetching recent transactions:", error); if(container) container.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดรายการล่าสุดได้</p>'; }
+            if (transactions.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีรายการเคลื่อนไหวล่าสุด</p>';
+                return;
+            }
+            let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>';
+            transactions.forEach(tx => {
+                let qtyClass = tx.quantity_change > 0 ? 'text-success' : (tx.quantity_change < 0 ? 'text-danger' : 'text-muted');
+                let qtySign = tx.quantity_change > 0 ? '+' : '';
+                let typeBadgeClass = 'bg-secondary';
+                let typeText = tx.transaction_type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                if (tx.transaction_type === 'STOCK_IN') { typeBadgeClass = 'bg-success-subtle text-success-emphasis'; typeText = 'รับเข้า'; }
+                else if (tx.transaction_type === 'SALE') { typeBadgeClass = 'bg-primary-subtle text-primary-emphasis'; typeText = 'ขาย'; }
+                else if (tx.transaction_type.includes('ADJUSTMENT_ADD')) { typeBadgeClass = 'bg-info-subtle text-info-emphasis'; typeText = 'ปรับเพิ่ม'; }
+                else if (tx.transaction_type.includes('ADJUSTMENT_SUB')) { typeBadgeClass = 'bg-warning-subtle text-warning-emphasis'; typeText = 'ปรับลด'; }
+                else if (tx.transaction_type.includes('TRANSFER_IN')) { typeBadgeClass = 'bg-secondary-subtle text-secondary-emphasis'; typeText = 'รับโอน'; }
+                else if (tx.transaction_type.includes('TRANSFER_OUT')) { typeBadgeClass = 'bg-secondary-subtle text-secondary-emphasis'; typeText = 'โอนออก'; }
+                else if (tx.transaction_type === 'INITIAL') { typeBadgeClass = 'bg-light text-dark'; typeText = 'สต็อกเริ่มต้น'; }
+                tableHtml += `
+                    <tr>
+                        <td style="width: 70%;">
+                            <span class="badge ${typeBadgeClass} rounded-pill me-2" style="min-width: 60px; text-align:center;">${typeText}</span>
+                            <strong class="me-1">${tx.product_name || 'N/A'}</strong>
+                            <small class="text-muted">@ ${tx.location_name || 'N/A'}</small>
+                            <div class="text-muted small" style="font-size: 0.8em;">${formatDateTime(tx.transaction_date)}</div>
+                            ${tx.notes ? `<div class="text-muted fst-italic small" style="font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${tx.notes}">Note: ${tx.notes}</div>` : ''}
+                        </td>
+                        <td class="text-end ${qtyClass} fw-bold" style="width: 30%;">
+                            ${qtySign}${formatNumber(tx.quantity_change)}
+                        </td>
+                    </tr>`;
+            });
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        } catch (error) {
+            console.error("Error fetching recent transactions:", error);
+            if (container) container.innerHTML = '<p class="text-center text-danger small p-3">ไม่สามารถโหลดรายการล่าสุดได้</p>';
+        }
     }
-
 
     // --- Initial Load ---
     document.addEventListener('DOMContentLoaded', function() {
-        // Fetch all data on load
         fetchAllDashboardData();
-
-        // Optional: Set interval for auto-refreshing KPIs
-        // setInterval(fetchKpiData, 3 * 60 * 1000); // Refresh KPIs every 3 minutes
     });
 
-    // Function to fetch all data (useful for a refresh button)
     function fetchAllDashboardData() {
         fetchKpiData();
         renderSalesTrendChart();
         renderTopProductsChart();
-        // renderCategoryDistributionChart(); // Call this when implemented
+        renderCategoryDistributionChart(); // Initial render (default is count-based)
         fetchAndDisplayLowStock();
         fetchAndDisplayRecentTransactions();
     }
