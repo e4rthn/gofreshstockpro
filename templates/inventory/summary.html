@@ -2,61 +2,199 @@
 
 {% block title %}สรุปสต็อกคงคลัง - GoFresh StockPro{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<style>
+    .stock-low { color: orange; font-weight: bold; }
+    .stock-negative { color: red; font-weight: bold; }
+    /* Ensure DataTable controls are well-spaced and visible */
+    div.dataTables_wrapper div.dataTables_length select,
+    div.dataTables_wrapper div.dataTables_filter input {
+        width: auto;
+        display: inline-block;
+        margin-left: 0.5em; /* For filter input */
+    }
+    .form-label { margin-bottom: 0.25rem; } /* Reduce bottom margin for labels in filter form */
+    .filter-form-section { margin-bottom: 1rem; } /* Add some bottom margin to filter sections */
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>สรุปสต็อกคงคลัง</h1>
+    <h1>สรุปสต็อกคงคลัง {% if selected_location_id %}- {% for loc in all_locations %}{% if loc.id == selected_location_id %}{{ loc.name }}{% endif %}{% endfor %}{% elif not selected_location_id and all_locations|length > 1 %} (ทุกสถานที่){% endif %}</h1>
     <div>
-        <a href="/ui/inventory/adjust/" class="btn btn-warning">ปรับปรุงสต็อก</a> {# เปลี่ยนลิงก์ไปหน้า Adjustment #}
-        <a href="/ui/inventory/stock-in/" class="btn btn-success">รับสินค้าเข้า</a>
+        <a href="{{ request.app.url_path_for('ui_show_adjustment_form') }}" class="btn btn-warning"><i class="bi bi-pencil-square me-1"></i>ปรับปรุงสต็อก</a>
+        <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}" class="btn btn-success"><i class="bi bi-plus-circle-fill me-1"></i>รับสินค้าเข้า</a>
     </div>
 </div>
 
-{# ---- ส่วนแสดง Message ---- #}
-{% set message = request.query_params.get('message') %}
 {% if message %}
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ message }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 {% endif %}
-{% set error = request.query_params.get('error') %}
 {% if error %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         ข้อผิดพลาด: {{ error }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 {% endif %}
-{# ------------------------ #}
 
+{# --- ฟอร์มกรอง --- #}
+<form method="get" action="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="mb-4 p-3 border rounded bg-light">
+    <div class="row g-3 align-items-end">
+        {% if all_locations|length > 1 %}
+        <div class="col-md-4 filter-form-section">
+            <label for="location_filter" class="form-label">เลือกสถานที่จัดเก็บ:</label>
+            <select class="form-select form-select-sm" id="location_filter" name="location" onchange="this.form.submit()">
+                <option value="">-- ทุกสถานที่ --</option>
+                {% for loc in all_locations %}
+                    <option value="{{ loc.id }}" {% if selected_location_id and selected_location_id|string == loc.id|string %}selected{% endif %}>
+                        {{ loc.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% elif all_locations|length == 1 and not selected_location_id %}
+             <input type="hidden" name="location" value="{{ all_locations[0].id }}">
+        {% endif %}
 
-{% if stock_summary %}
-<table class="table table-striped table-hover table-sm">
-    <thead>
-        <tr>
-            <th>สถานที่จัดเก็บ</th>
-            <th>ชื่อสินค้า</th>
-            <th>SKU/รหัสสินค้า</th>
-            <th>หมวดหมู่</th>
-            <th class="text-end">จำนวนคงเหลือ</th>
-            <th>อัปเดตล่าสุด</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in stock_summary %}
-        <tr>
-            <td>{{ item.location.name }}</td>
-            <td>{{ item.product.name }}</td>
-            <td>{{ item.product.sku }}</td>
-            <td>{{ item.product.category.name }}</td>
-            <td class="text-end">{{ item.quantity }}</td>
-            <td>{{ item.last_updated.strftime('%Y-%m-%d %H:%M:%S') if item.last_updated else '-'}}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <div class="col-md-4 filter-form-section">
+            <label for="category_filter" class="form-label">กรองตามหมวดหมู่:</label>
+            <select class="form-select form-select-sm" id="category_filter" name="category" onchange="this.form.submit()">
+                <option value="">-- ทุกหมวดหมู่ --</option>
+                {% for cat in all_categories %}
+                    <option value="{{ cat.id }}" {% if selected_category_id and selected_category_id|string == cat.id|string %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <input type="hidden" name="limit" value="{{ limit }}">
+        <div class="col-md-auto filter-form-section d-flex align-items-end">
+            <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="btn btn-outline-secondary btn-sm">ล้างค่ากรองทั้งหมด</a>
+        </div>
+    </div>
+</form>
+{# --------------------------------- #}
+
+{% if total_count > 0 %}
+<p>
+    พบข้อมูลทั้งหมด {{ total_count }} รายการ
+    {% if selected_location_id %}{% for loc in all_locations %}{% if loc.id|string == selected_location_id|string %} ใน <strong>{{ loc.name }}</strong>{% endif %}{% endfor %}{% endif %}
+    {% if selected_category_id %}{% for cat in all_categories %}{% if cat.id|string == selected_category_id|string %} ประเภท <strong>{{ cat.name }}</strong>{% endif %}{% endfor %}{% endif %}
+    (หน้าที่ {{ page }} / {{ total_pages }})
+</p>
+{% elif selected_location_id or selected_category_id %}
+<p class="text-muted mt-3">ไม่พบข้อมูลสต็อกตามเงื่อนไขที่เลือก</p>
 {% else %}
-<p class="text-muted">ไม่พบข้อมูลสต็อกปัจจุบัน</p>
-<p>ลอง <a href="/ui/inventory/stock-in/">รับสินค้าเข้า</a> ก่อน</p>
+{# No filters selected, and no data at all #}
 {% endif %}
 
+{% if stock_summary %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover table-sm" id="stockSummaryTable" data-page-length="{{ limit | default(15) }}">
+        <thead class="table-light">
+            <tr>
+                {% if not selected_location_id and all_locations|length > 1 %}
+                <th>สถานที่จัดเก็บ</th>
+                {% endif %}
+                <th>ชื่อสินค้า</th>
+                <th>SKU</th>
+                <th>หมวดหมู่</th>
+                <th class="text-end">จำนวนคงเหลือ</th>
+                <th>อัปเดตล่าสุด</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in stock_summary %}
+            <tr>
+                {% if not selected_location_id and all_locations|length > 1 %}
+                <td>{{ item.location.name if item.location else 'N/A' }}</td>
+                {% endif %}
+                <td>
+                    <a href="{{ request.app.url_path_for('ui_show_edit_product_form', product_id=item.product.id) if item.product else '#' }}" title="แก้ไขรายละเอียดสินค้า">
+                        {{ item.product.name if item.product else 'N/A' }}
+                    </a>
+                </td>
+                <td>{{ item.product.sku if item.product else 'N/A' }}</td>
+                <td>{{ item.product.category.name if item.product and item.product.category else 'N/A' }}</td>
+                <td class="text-end
+                    {% if item.quantity < 0 %}stock-negative{% elif item.quantity >= 0 and item.quantity <= 5 %}stock-low{% endif %}">
+                    {{ item.quantity }}
+                </td>
+                <td>{{ item.last_updated.strftime('%Y-%m-%d %H:%M') if item.last_updated else '-'}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% elif not selected_category_id and not selected_location_id and total_count == 0 %}
+<p class="text-muted mt-3">ไม่พบข้อมูลสต็อกปัจจุบันในระบบ</p>
+<p>ลอง <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}">รับสินค้าเข้า</a> หรือ <a href="{{ request.app.url_path_for('ui_list_stock_count_sessions') }}">ตรวจนับสต็อก</a> เพื่อเริ่มต้น</p>
+{% endif %}
+
+{% if total_pages > 1 %}
+<div class="mt-4 d-flex justify-content-center">
+    {% include '_pagination.html' %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function() {
+    var $stockTable = $('#stockSummaryTable');
+    // Initialize DataTable only if the table element exists and has at least one data row (excluding header)
+    if ($stockTable.length && $stockTable.find('tbody tr').filter(function() { return $(this).find('td').length > 0; }).length > 0) {
+        var pageLengthAttr = $stockTable.data('page-length');
+        var pageLength = 15; // Default
+
+        if (pageLengthAttr && !isNaN(parseInt(pageLengthAttr)) && parseInt(pageLengthAttr) > 0) {
+            pageLength = parseInt(pageLengthAttr);
+        }
+
+        var columnsInHeader = $stockTable.find('thead th').length;
+        var orderingEnabled = columnsInHeader > 1; // Disable ordering if only one data column effectively
+
+        $stockTable.DataTable({
+            "pageLength": pageLength,
+            "searching": true,
+            "ordering": orderingEnabled,
+            "order": [], // No initial sort
+            "language": {
+                "decimal":        "",
+                "emptyTable":     "ไม่มีข้อมูลในตาราง",
+                "info":           "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ",
+                "infoEmpty":      "แสดง 0 ถึง 0 จาก 0 รายการ",
+                "infoFiltered":   "(กรองจากทั้งหมด _MAX_ รายการ)",
+                "infoPostFix":    "",
+                "thousands":      ",",
+                "lengthMenu":     "แสดง _MENU_ รายการต่อหน้า",
+                "loadingRecords": "กำลังโหลด...",
+                "processing":     "กำลังประมวลผล...",
+                "search":         "ค้นหาในตาราง:",
+                "zeroRecords":    "ไม่พบรายการที่ค้นหา",
+                "paginate": {
+                    "first":      "หน้าแรก",
+                    "last":       "หน้าสุดท้าย",
+                    "next":       "ถัดไป",
+                    "previous":   "ก่อนหน้า"
+                },
+                "aria": {
+                    "sortAscending":  ": เรียงจากน้อยไปมาก",
+                    "sortDescending": ": เรียงจากมากไปน้อย"
+                }
+            }
+        });
+    } else {
+        // Optional: If you want to do something when the table is empty or not present
+        console.log("DataTables not initialized for stockSummaryTable as it's empty or not found.");
+    }
+});
+</script>
 {% endblock %}
