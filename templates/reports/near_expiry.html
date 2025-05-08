@@ -53,25 +53,24 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for tx in transactions %}
-                    {% set days_left = (tx.expiry_date - today).days if tx.expiry_date else -1 %}
+                    {% for tx in transactions %} {# วนลูป List of Dicts ที่ชื่อ transactions #}
+                    {% set days_left = tx.days_left %} {# ใช้ days_left ที่คำนวณมาแล้วใน Python #}
                     {% set row_class = '' %}
                     {% if days_left >= 0 and days_left <= 7 %} {% set row_class = 'table-danger text-danger-emphasis' %}
                     {% elif days_left > 7 and days_left <= 14 %} {% set row_class = 'table-warning text-warning-emphasis' %}
                     {% endif %}
                     <tr class="{{ row_class }}">
-                        <td>{{ tx.product.name if tx.product else 'N/A' }} <small class="text-muted">({{ tx.product.sku if tx.product else 'N/A' }})</small></td>
-                        <td>{{ tx.location.name if tx.location else 'N/A' }}</td>
-                        {# *** แสดง Shelf Life *** #}
-                        <td class="text-center shelf-life-cell">{{ tx.product.shelf_life_days if tx.product and tx.product.shelf_life_days is not none else '-' }}</td>
+                        {# *** แก้ไขตรงนี้: ใช้ tx.product_name และ tx.product_sku *** #}
+                        <td>{{ tx.product_name }} <small class="text-muted">({{ tx.product_sku }})</small></td>
+                        {# *** แก้ไขตรงนี้: ใช้ tx.location_name *** #}
+                        <td>{{ tx.location_name }}</td>
+                        <td class="text-center shelf-life-cell">{{ tx.shelf_life_days }}</td> {# ใช้ shelf_life_days ที่ส่งมา #}
                         <td class="text-end">{{ tx.quantity_change }}</td>
-                        {# *** ใช้ thaidate filter *** #}
-                        <td>{{ tx.expiry_date | thaidate }}</td>
+                        <td>{{ tx.expiry_date_formatted }}</td> {# ใช้ formatted date #}
                         <td class="text-center fw-bold">{{ days_left if days_left >= 0 else '-' }}</td>
                         <td class="text-end">{{ "%.2f"|format(tx.cost_per_unit) if tx.cost_per_unit is not none else '-' }}</td>
                         <td>{{ tx.notes if tx.notes else '-' }}</td>
-                        {# *** ใช้ thaitime filter *** #}
-                        <td class="date-cell">{{ tx.transaction_date | thaitime(format='%d/%m/%y %H:%M') }}</td> {# <-- ใช้ format สั้น #}
+                        <td class="date-cell">{{ tx.transaction_date_formatted }}</td> {# ใช้ formatted datetime #}
                     </tr>
                     {% endfor %}
                 </tbody>
