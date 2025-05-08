@@ -48,7 +48,7 @@ body {
 .wrapper { display: flex; flex-direction: column; min-height: 100vh; }
 .content-container { flex: 1 0 auto; padding-top: 2rem; padding-bottom: 2rem; }
 
-/* Navbar Styling (เหมือนเดิมจากครั้งก่อน) */
+/* Navbar Styling */
 .navbar.navbar-hitech { background-color: rgba(37, 42, 52, 0.85); border-bottom: 1px solid var(--hitech-border); backdrop-filter: blur(10px); padding-top: 0.75rem; padding-bottom: 0.75rem; }
 .navbar.navbar-hitech .navbar-brand { color: var(--hitech-accent); font-weight: 700; letter-spacing: 1px; font-size: 1.25rem; }
 .navbar.navbar-hitech .navbar-brand:hover, .navbar.navbar-hitech .navbar-brand:focus { color: var(--hitech-accent-hover); text-shadow: 0 0 5px var(--hitech-accent-hover); }
@@ -62,16 +62,16 @@ body {
 .navbar.navbar-hitech .navbar-toggler { border: 1px solid var(--hitech-border); }
 .navbar.navbar-hitech .navbar-toggler-icon { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 249, 160, 0.8)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e"); }
 
-/* Footer Styling (เหมือนเดิม) */
+/* Footer Styling */
 .footer.footer-hitech { background-color: var(--hitech-surface); border-top: 1px solid var(--hitech-border); color: var(--hitech-text-secondary); padding: 1.5rem 0; font-size: 0.875rem; }
 
-/* Card Styling (เหมือนเดิม) */
+/* Card Styling */
 .card { background-color: var(--hitech-surface); border: 1px solid var(--hitech-border); border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; margin-bottom: 1.5rem; }
 .card:hover { box-shadow: 0 6px 25px rgba(0, 249, 160, 0.1); }
 .card-header { background-color: rgba(0,0,0,0.15); border-bottom: 1px solid var(--hitech-border); color: var(--hitech-accent); font-weight: 700; padding: 0.75rem 1.25rem; letter-spacing: 0.5px; border-top-left-radius: inherit; border-top-right-radius: inherit; }
 .card-body { padding: 1.5rem; }
 
-/* Table Styling (เหมือนเดิม) */
+/* Table Styling */
 .table { --bs-table-bg: transparent; --bs-table-striped-bg: rgba(0,0,0,0.1); --bs-table-hover-bg: rgba(0, 249, 160, 0.08); --bs-table-color: var(--hitech-text-primary); --bs-table-border-color: var(--hitech-border); margin-bottom: 0; }
 .card-body .table:last-child { margin-bottom: 0; }
 .table thead th { background-color: rgba(0,0,0,0.2); color: var(--hitech-accent); border-bottom-width: 2px; border-color: var(--hitech-border); font-weight: 600; white-space: nowrap; padding: 0.75rem 1rem; vertical-align: bottom; }
@@ -80,7 +80,7 @@ body {
 .table td, .table th { padding: 0.75rem 1rem; vertical-align: middle; }
 .table-sm th, .table-sm td { padding: 0.5rem 0.6rem; }
 
-/* *** Form Control Styling (Hi-Tech Update) *** */
+/* Form Control Styling (Hi-Tech Update) */
 .form-control, .form-select, .form-control-plaintext {
     background-color: transparent; /* ไม่มีสีพื้นหลัง */
     color: var(--hitech-text-primary);
@@ -119,7 +119,7 @@ body {
     font-weight: 500; color: var(--hitech-text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;
 }
 
-/* --- Floating Labels Styling --- */
+/* Floating Labels Styling */
 .form-floating { position: relative; }
 .form-floating > .form-control,
 .form-floating > .form-select {
@@ -143,9 +143,6 @@ body {
 }
  /* Keep select label floated if a value is selected (might need JS or rely on :focus) */
  /* This CSS-only approach keeps it floated once focused */
-
-     /* Style for the select label *before* focus/selection if needed */
-     /* To always float it like Material Design, apply the transform below directly */
  /* Ensure select label is also green on focus */
 .form-floating > .form-select:focus ~ label {
      opacity: 1; transform: scale(.75) translateY(-0.8rem) translateX(0.15rem);
@@ -153,16 +150,13 @@ body {
      padding: 0 0.3rem; height: auto; border-bottom: none;
 }
 .form-floating > textarea.form-control { padding-top: 1.35rem; padding-bottom: 0.35rem; min-height: calc(3.5rem + 2px); }
-/* --- End Floating Labels --- */
 
 .form-check-input { background-color: var(--hitech-surface); border-color: var(--hitech-border); }
 .form-check-input:checked { background-color: var(--hitech-accent); border-color: var(--hitech-accent); }
 .form-check-input:focus { border-color: var(--hitech-accent); box-shadow: 0 0 0 0.2rem rgba(0, 249, 160, 0.25); }
 .form-text { color: var(--hitech-text-secondary); opacity: 0.8; font-size: 0.8rem; }
-/* --- End Form Control Styling --- */
 
-
-/* Button Styling (เหมือนเดิม) */
+/* Button Styling */
 .btn { padding: 0.5rem 1.25rem; border-radius: 6px; font-weight: 600; letter-spacing: 0.5px; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
 .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 .btn:focus { box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.3); }
@@ -180,7 +174,7 @@ body {
 .btn-info:hover { background-color: #ff4dd2; border-color: #ff4dd2; box-shadow: 0 4px 15px rgba(255, 0, 200, 0.25); }
 .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.875rem; }
 
-/* Alert Styling (เหมือนเดิม) */
+/* Alert Styling */
 .alert { border-width: 0; border-left-width: 5px; border-radius: 6px; padding: 1rem 1.25rem; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
 .alert-success { background-color: rgba(0, 255, 140, 0.15); border-color: var(--hitech-success); color: var(--hitech-success); }
 .alert-danger { background-color: rgba(255, 55, 95, 0.15); border-color: var(--hitech-danger); color: var(--hitech-danger); }
@@ -188,13 +182,13 @@ body {
 .alert-info { background-color: rgba(0, 249, 160, 0.15); border-color: var(--hitech-accent); color: var(--hitech-accent); }
 .alert .btn-close { filter: invert(80%) sepia(10%) saturate(1000%) hue-rotate(180deg) brightness(100%) contrast(80%); }
 
-/* Pagination (เหมือนเดิม) */
+/* Pagination */
 .pagination .page-link { background-color: var(--hitech-surface); border-color: var(--hitech-border); color: var(--hitech-text-secondary); margin: 0 2px; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
 .pagination .page-link:hover { background-color: var(--hitech-border); color: var(--hitech-accent); border-color: var(--hitech-accent); }
 .pagination .page-item.active .page-link { background-color: var(--hitech-accent); border-color: var(--hitech-accent); color: #000; }
 .pagination .page-item.disabled .page-link { background-color: var(--hitech-surface); border-color: var(--hitech-border); color: var(--hitech-text-secondary); opacity: 0.4; }
 
-/* KPI Cards (เหมือนเดิม) */
+/* KPI Cards */
 .kpi-card { background-color: var(--hitech-surface); border: 1px solid var(--hitech-border); border-left-width: 5px; transition: box-shadow 0.3s ease-in-out, transform 0.2s ease-in-out; border-radius: 8px; }
 .kpi-card:hover { box-shadow: 0 8px 30px rgba(0, 249, 160, 0.1); transform: translateY(-5px); }
 .kpi-card .card-title { color: var(--hitech-text-secondary); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem; }
@@ -207,7 +201,7 @@ body {
 .kpi-card.border-left-warning { border-left-color: var(--hitech-warning) !important; }
 .kpi-card.border-left-info { border-left-color: var(--hitech-accent-secondary) !important; }
 
-/* Badge styling (เหมือนเดิม) */
+/* Badge styling */
 .badge { border-radius: 6px; font-weight: 600; padding: 0.45em 0.7em; font-size: 0.8em; letter-spacing: 0.3px; vertical-align: middle; }
 .text-bg-secondary, .bg-secondary { background-color: var(--hitech-border) !important; color: var(--hitech-text-secondary) !important; }
 .text-bg-success, .bg-success { background-color: var(--hitech-success) !important; color: #000 !important; }
@@ -219,18 +213,18 @@ body {
 .text-bg-dark, .bg-dark { background-color: #000 !important; color: var(--hitech-text-primary) !important; }
 .badge.bg-success { color: #000 !important; } .badge.bg-warning { color: #000 !important; } .badge.bg-danger { color: #fff !important; } .badge.bg-info { color: #fff !important; } .badge.bg-primary { color: #000 !important; }
 
-/* Custom scrollbar (เหมือนเดิม) */
+/* Custom scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--hitech-bg); border-radius: 5px; }
 ::-webkit-scrollbar-thumb { background-color: var(--hitech-border); border-radius: 5px; border: 2px solid var(--hitech-bg); }
 ::-webkit-scrollbar-thumb:hover { background-color: var(--hitech-accent); }
 
-/* Headings (เหมือนเดิม) */
+/* Headings */
 h1, h2, h3, h4, h5, h6 { color: var(--hitech-text-primary); font-weight: 700; letter-spacing: 0.5px; }
 h1 { font-size: 2.2rem; } h2 { font-size: 1.8rem; } h3 { font-size: 1.5rem; }
 hr { border-top-color: var(--hitech-border); opacity: 0.3; }
 
-/* DataTables (เหมือนเดิม) */
+/* DataTables */
 div.dataTables_wrapper div.dataTables_length label, div.dataTables_wrapper div.dataTables_filter label, div.dataTables_wrapper div.dataTables_info { color: var(--hitech-text-secondary) !important; }
 div.dataTables_wrapper div.dataTables_length select, div.dataTables_wrapper div.dataTables_filter input { background-color: var(--hitech-bg) !important; border: 1px solid var(--hitech-border) !important; color: var(--hitech-text-primary) !important; border-radius: 4px; padding: 0.3rem 0.6rem; }
 div.dataTables_wrapper div.dataTables_paginate .page-link { color: var(--hitech-text-secondary) !important; background-color: var(--hitech-surface) !important; border: 1px solid var(--hitech-border) !important; }
@@ -238,9 +232,94 @@ div.dataTables_wrapper div.dataTables_paginate .page-link:hover { color: var(--h
 .page-item.active .page-link { background-color: var(--hitech-accent) !important; border-color: var(--hitech-accent) !important; color: #000 !important; }
 .page-item.disabled .page-link { color: var(--hitech-text-secondary) !important; opacity: 0.4; background-color: var(--hitech-surface) !important; border: 1px solid var(--hitech-border) !important; }
 
-/* Utility classes (เหมือนเดิม) */
+/* Utility classes */
 .text-accent { color: var(--hitech-accent) !important; }
 .text-success-neon { color: var(--hitech-success) !important; }
 .text-danger-neon { color: var(--hitech-danger) !important; }
 .text-warning-neon { color: var(--hitech-warning) !important; }
 .glow-accent { box-shadow: 0 0 8px var(--hitech-accent), 0 0 12px var(--hitech-accent), 0 0 16px var(--hitech-accent); }
+
+
+/* --- Responsive Adjustments --- */ /* <<< เพิ่มส่วนนี้ต่อท้ายสุด */
+
+/* Medium devices (tablets, landscape phones, 768px and down) */
+@media (max-width: 767.98px) {
+
+    /* 1. ลดขนาดหัวข้อหลักเล็กน้อย */
+    h1, .h1 { font-size: 1.7rem; }
+    h2, .h2 { font-size: 1.5rem; }
+    h3, .h3 { font-size: 1.3rem; }
+
+    /* 2. ลด Padding ใน Card Body */
+    .card-body { padding: 1rem; }
+
+    /* 3. ลดขนาด Font ในตาราง และ Padding */
+    .table { font-size: 0.9rem; /* ลดขนาด font พื้นฐานของตาราง */ }
+    .table thead th { font-size: 0.85rem; /* ลดขนาด header table */ }
+    .table td, .table th { padding: 0.5rem 0.6rem; /* ลด padding ใน cell */ }
+    .table-sm td, .table-sm th { padding: 0.4rem 0.5rem; } /* ลด padding ตารางแบบ sm */
+
+    /* 4. ทำให้กลุ่มปุ่ม Filter (เช่น Location Pills) มีระยะห่างเหมาะสม */
+    .filter-section .nav-pills .nav-link {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+        margin-right: 0.3rem;
+        margin-bottom: 0.4rem;
+    }
+
+    /* 5. (ตัวอย่าง) ทำให้ปุ่มในฟอร์มบางส่วนกว้างเต็มจอ */
+    /* คุณต้องไปเพิ่ม class "form-actions-mobile-full-width" ให้กับ div ที่ครอบปุ่มใน HTML เอง */
+    .form-actions-mobile-full-width .btn {
+        width: 100%;
+        margin-bottom: 0.5rem; /* เพิ่มระยะห่างระหว่างปุ่ม */
+        font-size: 0.95rem; /* ปรับขนาด font ปุ่มให้เหมาะสม */
+        padding: 0.5rem;
+    }
+    .form-actions-mobile-full-width .btn:last-child {
+        margin-bottom: 0;
+    }
+
+    /* 6. ปรับหน้า POS (ถ้าจำเป็น) */
+    #product-grid {
+        max-height: 350px; /* อาจจะลดความสูง Grid สินค้าลง */
+        /* ทำให้ product card เล็กลง */
+        /* Bootstrap's row-cols-sm-3 row-cols-md-3 etc should handle columns, force 2? */
+         grid-template-columns: repeat(2, 1fr) !important; /* บังคับ 2 คอลัมน์ */
+    }
+    .product-card .product-name { font-size: 0.8rem; }
+    .product-card .product-price { font-size: 0.8rem; }
+    .product-card .product-sku { font-size: 0.7rem; }
+    .pos-current-sale-col .table { font-size: 0.85rem; } /* ลดขนาด font ตารางรายการขาย */
+
+    /* 7. ลดขนาด KPI Dashboard */
+    .kpi-card .kpi-value { font-size: 1.8rem; }
+    .kpi-card .kpi-icon { display: none; } /* ซ่อน icon ใหญ่ไปเลยก็ได้ */
+
+    /* 8. ปรับ Filter Form ให้เรียงสวยงามขึ้น */
+     .filter-section .row > div { /* ทำให้ทุก col ใน filter section */
+         flex-basis: 100% !important; /* กว้างเต็ม */
+         margin-bottom: 0.75rem !important; /* เพิ่มระยะห่างล่าง */
+     }
+     .filter-section .form-floating > label { font-size: 0.75rem;} /* ลดขนาด label */
+
+}
+
+/* Small devices (phones, 576px and down) */
+@media (max-width: 575.98px) {
+    body { font-size: 0.95rem; } /* ลดขนาด font พื้นฐานเล็กน้อย */
+    h1, .h1 { font-size: 1.5rem; }
+
+    /* ทำให้ Navbar Brand เล็กลง */
+    .navbar-brand { font-size: 1.1rem; }
+
+    /* ทำให้ปุ่มหลักๆ ในฟอร์มไม่ใหญ่เกินไป */
+     .form-actions-mobile-full-width .btn {
+         padding: 0.4rem;
+         font-size: 0.9rem;
+     }
+
+     /* ลดขนาดฟอนต์ในตารางอีกนิด */
+     .table { font-size: 0.85rem; }
+     .table td, .table th { padding: 0.4rem 0.5rem; }
+     .table-sm td, .table-sm th { padding: 0.3rem 0.4rem; }
+}

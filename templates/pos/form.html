@@ -34,11 +34,11 @@
 {% endif %}
 {# --- End Alerts --- #}
 
-{# --- ใช้ action ที่ถูกต้อง ถ้า ui_handle_pos_form อยู่ใน routers/ui/sales.py --- #}
 <form id="pos-form" method="post" action="{{ request.app.url_path_for('ui_handle_pos_form') }}">
     <div class="row">
         {# --- Left Column: Product Selection --- #}
-        <div class="col-lg-7 col-md-6 mb-3">
+        {# Use col-12 for small screens, col-lg-7 for large #}
+        <div class="col-12 col-lg-7 mb-3 pos-product-selection-col">
             <div class="card">
                 <div class="card-header"><h5 class="mb-0">เลือกสินค้า</h5></div>
                 <div class="card-body">
@@ -48,7 +48,7 @@
                         <div class="btn-group location-btn-group flex-wrap" role="group" aria-label="สถานที่ขาย">
                             {% for location in locations %}
                                 <input type="radio" class="btn-check" name="location_id" id="location_{{ location.id }}" value="{{ location.id }}" autocomplete="off" {% if loop.first %}required{% endif %}>
-                                <label class="btn btn-outline-primary" for="location_{{ location.id }}">{{ location.name }}</label>
+                                <label class="btn btn-outline-primary btn-sm" for="location_{{ location.id }}">{{ location.name }}</label> {# Use btn-sm #}
                             {% endfor %}
                         </div>
                     </div>
@@ -57,7 +57,7 @@
                     {# Scan Input #}
                     <div id="scan-input-container">
                         <label for="scan-input" class="form-label">สแกน/กรอกรหัส (SKU/Barcode) แล้ว Enter:</label>
-                        <input type="text" class="form-control form-control-lg" id="scan-input" placeholder="รอรับการสแกน...">
+                        <input type="text" class="form-control form-control-sm" id="scan-input" placeholder="รอรับการสแกน..."> {# Use form-control-sm #}
                         <div id="scan-error" class="small mt-1"></div>
                     </div>
                     <hr>
@@ -75,7 +75,8 @@
                         {% endfor %}
                     </ul>
                     <div class="border p-2 bg-dark-subtle rounded" style="min-height: 250px;">
-                        <div id="product-grid" class="row row-cols-2 row-cols-sm-3 row-cols-md-3 row-cols-lg-4 g-2">
+                        {# Updated grid classes for better mobile view #}
+                        <div id="product-grid" class="row row-cols-2 row-cols-sm-3 row-cols-xl-4 g-2"> {# Show 2 cols on xs, 3 on sm+, 4 on xl+ #}
                             <p id="product-grid-placeholder" class="text-muted p-3">กรุณาเลือกหมวดหมู่เพื่อแสดงสินค้า...</p>
                         </div>
                     </div>
@@ -84,20 +85,21 @@
         </div>
 
         {# --- Right Column: Current Sale --- #}
-        <div class="col-lg-5 col-md-6 mb-3">
+        {# Use col-12 for small screens, col-lg-5 for large #}
+        <div class="col-12 col-lg-5 mb-3 pos-current-sale-col">
              <div class="card">
                  <div class="card-header"><h5 class="mb-0">รายการขายปัจจุบัน</h5></div>
                  <div class="card-body">
                     {# Sale Items Table #}
-                    <div class="table-responsive mb-3" style="max-height: 350px; overflow-y: auto;">
+                    {# Ensure table scrolls on small screens if needed #}
+                    <div class="table-responsive mb-3" style="max-height: 300px; overflow-y: auto;">
                         <table id="sale-items-table" class="table table-sm table-bordered">
                             <thead class="sticky-top">
                                 <tr>
                                     <th>สินค้า (SKU)</th>
-                                    <th class="text-end" style="width: 80px;">จำนวน</th>
-                                    <th class="text-end">ราคา/หน่วย</th>
-                                    <th class="text-end">รวม</th>
-                                    <th class="text-center">ลบ</th>
+                                    <th class="text-end" style="width: 65px;">จำนวน</th> {# Adjust width #}
+                                    <th class="text-end d-none d-sm-table-cell">ราคา/หน่วย</th> <th class="text-end">รวม</th>
+                                    <th class="text-center" style="width: 40px;">ลบ</th> {# Adjust width #}
                                 </tr>
                             </thead>
                             <tbody>
@@ -107,13 +109,13 @@
                     </div>
                     {# Sale Total #}
                     <div class="d-flex justify-content-end align-items-center mb-3 border-top pt-3 border-secondary">
-                        <h4 class="me-3 mb-0">ยอดรวมสุทธิ:</h4>
-                        <h4 id="sale-total" class="text-accent mb-0">0.00</h4>
+                        <h5 class="me-3 mb-0">ยอดรวม:</h5> {# Smaller heading #}
+                        <h5 id="sale-total" class="text-accent mb-0">0.00</h5>
                     </div>
                      {# Notes #}
                      <div class="mb-3">
                         <label for="notes" class="form-label">หมายเหตุการขาย</label>
-                        <textarea class="form-control form-control-sm" id="notes" name="notes" rows="2"></textarea>
+                        <textarea class="form-control form-control-sm" id="notes" name="notes" rows="1"></textarea> {# Fewer rows #}
                     </div>
                     {# Hidden inputs for form data #}
                     <div id="sale-items-data"></div>
@@ -121,14 +123,13 @@
                     {# Override Stock Checkbox #}
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="override_stock_check" name="override_stock_check" value="True" {% if ask_override == 'true' %}checked{% endif %}>
-                        <label class="form-check-label" for="override_stock_check">ยืนยันการขายแม้สต็อกในระบบไม่พอ</label>
+                        <label class="form-check-label small" for="override_stock_check">ยืนยันการขายแม้สต็อกในระบบไม่พอ</label> {# Smaller label #}
                     </div>
 
                     {# Action Buttons #}
-                    <div class="d-grid gap-2">
+                    {# Add helper class for mobile styling #}
+                    <div class="d-grid gap-2 form-actions-mobile-full-width">
                         <button type="submit" class="btn btn-primary btn-lg">บันทึกการขาย</button>
-                         {# *** ใช้ Hardcoded URL สำหรับปุ่มยกเลิก *** #}
-                         {# ชี้ไปที่ root ซึ่งจะ redirect ไป dashboard #}
                         <a href="/" class="btn btn-secondary">ยกเลิก</a>
                     </div>
                  </div>
@@ -140,7 +141,8 @@
 
 {% block scripts_extra %}
 <script>
-    // DOM Elements
+    // ... (JavaScript เดิมสำหรับ POS ไม่ต้องแก้ไข เว้นแต่ Logic มีปัญหา) ...
+    // Ensure DOM elements are selected correctly if IDs changed
     const categoryTabs = document.querySelectorAll('.category-tabs .nav-link');
     const productGrid = document.getElementById('product-grid');
     const productGridPlaceholder = document.getElementById('product-grid-placeholder');
@@ -153,16 +155,16 @@
     const scanErrorDiv = document.getElementById('scan-error');
 
     let saleTotal = 0.0;
-    let itemCounter = 0; // For unique refs for hidden inputs
+    let itemCounter = 0;
 
     // --- Helper Functions ---
     function formatNumber(value) { return value != null ? parseInt(value).toLocaleString('th-TH') : '0'; }
 
-    // --- Load Products for Selected Category ---
+    // --- Load Products ---
     async function loadProductsForCategory(categoryId) {
         if (!categoryId) { productGrid.innerHTML = ''; if(productGridPlaceholder) productGridPlaceholder.style.display = 'block'; return; }
         if(productGridPlaceholder) productGridPlaceholder.style.display = 'none';
-        productGrid.innerHTML = '<p class="text-muted p-3">กำลังโหลดสินค้า...</p>';
+        productGrid.innerHTML = '<p class="text-muted p-3 small">กำลังโหลด...</p>'; // Smaller text
         try {
             const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -172,10 +174,9 @@
                 products.forEach(product => {
                     const cardCol = document.createElement('div');
                     cardCol.className = 'col'; // Use Bootstrap column structure
-                    const card = document.createElement('div'); // Inner card for styling
+                    const card = document.createElement('div');
                     card.className = 'product-card d-flex flex-column h-100';
 
-                    // Use default values if API data is missing
                     const productName = product.name || 'N/A';
                     const productSku = product.sku || 'N/A';
                     const productPrice = parseFloat(product.price_b2c || 0).toFixed(2);
@@ -185,132 +186,107 @@
                         <div class="product-name">${productName}</div>
                         <div>
                             <div class="product-sku">SKU: ${productSku} ${productBarcode ? `[${productBarcode}]` : ''}</div>
-                            <div class="product-price">${productPrice} บาท</div>
+                            <div class="product-price">${productPrice}</div> {# Remove บาท #}
                         </div>`;
-                    // Set dataset attributes on the clickable element (card or cardCol)
                     cardCol.dataset.productId = product.id;
                     cardCol.dataset.productName = productName;
                     cardCol.dataset.productSku = productSku;
-                    cardCol.dataset.unitPrice = product.price_b2c || '0'; // Store original value
+                    cardCol.dataset.unitPrice = product.price_b2c || '0';
                     cardCol.dataset.barcode = productBarcode;
-                    cardCol.addEventListener('click', handleProductCardClick); // Add listener to the column
-                    cardCol.appendChild(card); // Append the styled card to the column
-                    productGrid.appendChild(cardCol); // Append the column to the grid
+                    cardCol.addEventListener('click', handleProductCardClick);
+                    cardCol.appendChild(card);
+                    productGrid.appendChild(cardCol);
                 });
             } else {
-                productGrid.innerHTML = '<p class="text-muted p-3">-- ไม่มีสินค้าในหมวดหมู่นี้ --</p>';
+                productGrid.innerHTML = '<p class="text-muted p-3 small">-- ไม่มีสินค้า --</p>'; // Shorter text
             }
         } catch (error) {
             console.error('Error fetching products:', error);
-            productGrid.innerHTML = '<p class="text-danger p-3">-- เกิดข้อผิดพลาดในการโหลดสินค้า --</p>';
+            productGrid.innerHTML = '<p class="text-danger p-3 small">-- โหลดผิดพลาด --</p>'; // Shorter text
         }
     }
 
     // --- Handle Clicking a Product Card ---
      function handleProductCardClick(event) {
-        const cardCol = event.currentTarget; // The 'col' div now holds the dataset
+        const cardCol = event.currentTarget;
         const selectedLocation = document.querySelector('input[name="location_id"]:checked');
         if (!selectedLocation) {
-            alert('กรุณาเลือกสถานที่ขายก่อนเพิ่มสินค้า');
-            if (scanErrorDiv) scanErrorDiv.textContent = 'กรุณาเลือกสถานที่ขายก่อนเพิ่มสินค้า';
+            alert('กรุณาเลือกสถานที่ขายก่อน');
+            if (scanErrorDiv) scanErrorDiv.textContent = 'กรุณาเลือกสถานที่ขาย';
             return;
         }
-         if (scanErrorDiv) scanErrorDiv.textContent = ''; // Clear error
+         if (scanErrorDiv) scanErrorDiv.textContent = '';
 
-        // Ensure data exists before calling addItemToSale
         const productId = cardCol.dataset.productId;
         const productName = cardCol.dataset.productName;
         const productSku = cardCol.dataset.productSku;
         const unitPrice = parseFloat(cardCol.dataset.unitPrice || 0);
         const barcode = cardCol.dataset.barcode;
 
-        if (!productId) {
-             console.error("Product ID missing from card dataset");
-             return;
-        }
-
+        if (!productId) { console.error("Product ID missing"); return; }
         addItemToSale(productId, productName, productSku, 1, unitPrice, barcode);
     }
 
-    // --- Add Item to Sale Table and Hidden Inputs ---
+    // --- Add Item to Sale ---
     function addItemToSale(productId, productName, productSku, quantity, unitPrice, productBarcode = null) {
-        const pName = productName || "Unknown Product";
+        const pName = productName || "Unknown";
         const pSku = productSku || "NO-SKU";
-        const uPrice = !isNaN(unitPrice) ? unitPrice : 0; // Ensure unitPrice is a number
+        const uPrice = !isNaN(unitPrice) ? unitPrice : 0;
 
         const existingRow = saleItemsTableBody.querySelector(`tr[data-product-id="${productId}"]`);
 
         if (existingRow) {
-            // Update existing item
             const quantityCell = existingRow.querySelector('.item-quantity-display') || existingRow.cells[1];
             const currentItemQuantity = parseInt(quantityCell.textContent || '0');
             const newQuantity = currentItemQuantity + quantity;
             quantityCell.textContent = newQuantity;
-
-            const itemTotalPrice = newQuantity * uPrice;
-            existingRow.cells[3].textContent = itemTotalPrice.toFixed(2);
-
-            // Update hidden input value for quantity
+            existingRow.cells[3].textContent = (newQuantity * uPrice).toFixed(2); // Update total column
             const hiddenQtyInput = saleItemsDataContainer.querySelector(`input[name="item_quantity"][data-product-id-ref="${productId}"]`);
             if(hiddenQtyInput) hiddenQtyInput.value = newQuantity;
-
         } else {
-            // Add new item row
             const itemTotalPrice = quantity * uPrice;
             const currentItemRef = `item_ref_${itemCounter++}`;
             const newRow = document.createElement('tr');
             newRow.dataset.productId = productId;
             newRow.dataset.itemRef = currentItemRef;
-
             let displayName = `${pName} (${pSku})`;
 
             newRow.innerHTML = `
                 <td>${displayName}</td>
                 <td class="text-end item-quantity-display">${quantity}</td>
-                <td class="text-end">${uPrice.toFixed(2)}</td>
-                <td class="text-end">${itemTotalPrice.toFixed(2)}</td>
+                <td class="text-end d-none d-sm-table-cell">${uPrice.toFixed(2)}</td> <td class="text-end">${itemTotalPrice.toFixed(2)}</td>
                 <td class="text-center">
                     <button type="button" class="btn btn-danger btn-sm remove-item-btn" data-item-ref="${currentItemRef}">X</button>
                 </td>`;
-
             const removeBtn = newRow.querySelector('.remove-item-btn');
             if(removeBtn) removeBtn.addEventListener('click', handleRemoveItemClick);
-
             saleItemsTableBody.appendChild(newRow);
-
-            // Add hidden inputs for this item
             addHiddenInput('item_product_id', productId, currentItemRef, productId);
             addHiddenInput('item_quantity', quantity, currentItemRef, productId);
             addHiddenInput('item_unit_price', uPrice.toFixed(2), currentItemRef);
         }
-
         if (noItemsRow) noItemsRow.style.display = 'none';
         updateGrandTotal();
         if (scanInput) scanInput.focus();
     }
 
-    // --- Helper to Add Hidden Inputs ---
+    // --- Add Hidden Input ---
     function addHiddenInput(name, value, itemRef, productIdRef = null) {
          const hiddenInput = document.createElement('input');
-         hiddenInput.type = 'hidden';
-         hiddenInput.name = name;
-         hiddenInput.value = value;
-         hiddenInput.dataset.itemRef = itemRef; // Link to the row
-         if (productIdRef) {
-             hiddenInput.dataset.productIdRef = productIdRef; // Link quantity to product ID
-         }
+         hiddenInput.type = 'hidden'; hiddenInput.name = name; hiddenInput.value = value;
+         hiddenInput.dataset.itemRef = itemRef;
+         if (productIdRef) { hiddenInput.dataset.productIdRef = productIdRef; }
          saleItemsDataContainer.appendChild(hiddenInput);
     }
 
     // --- Handle Removing Item ---
      function handleRemoveItemClick(event) {
-         const button = event.target;
+         const button = event.target.closest('.remove-item-btn'); // Ensure targeting button
+         if (!button) return; // Exit if click wasn't on or inside the button
          const itemRefToRemove = button.dataset.itemRef;
          const rowToRemove = saleItemsTableBody.querySelector(`tr[data-item-ref="${itemRefToRemove}"]`);
          if (rowToRemove) rowToRemove.remove();
-
          saleItemsDataContainer.querySelectorAll(`input[data-item-ref="${itemRefToRemove}"]`).forEach(input => input.remove());
-
          updateGrandTotal();
          if (saleItemsTableBody.querySelectorAll('tr:not(#no-items-row)').length === 0 && noItemsRow) {
              noItemsRow.style.display = '';
@@ -318,18 +294,20 @@
          if (scanInput) scanInput.focus();
      }
 
-    // --- Update Grand Total Display ---
+    // --- Update Grand Total ---
     function updateGrandTotal() {
         saleTotal = 0;
         const rows = saleItemsTableBody.querySelectorAll('tr:not(#no-items-row)');
         rows.forEach(row => {
-            // Ensure cells exist before accessing textContent
+            // Get quantity and price from the correct cells
             const quantityText = row.cells[1] ? row.cells[1].textContent : '0';
-            const unitPriceText = row.cells[2] ? row.cells[2].textContent : '0';
+            const totalText = row.cells[3] ? row.cells[3].textContent : '0'; // Get item total directly
+            // const unitPriceText = row.cells[2] ? row.cells[2].textContent : '0'; // Or unit price if needed
             const quantity = parseInt(quantityText);
-            const unitPrice = parseFloat(unitPriceText);
-            if (!isNaN(quantity) && !isNaN(unitPrice)) {
-                saleTotal += quantity * unitPrice;
+            const itemTotal = parseFloat(totalText);
+            // const unitPrice = parseFloat(unitPriceText);
+            if (!isNaN(quantity) && !isNaN(itemTotal)) {
+                 saleTotal += itemTotal; // Sum up item totals
             }
         });
         saleTotalElement.textContent = saleTotal.toFixed(2);
@@ -346,7 +324,7 @@
 
                 const selectedLocation = document.querySelector('input[name="location_id"]:checked');
                 if (!selectedLocation) {
-                    const msg = 'กรุณาเลือกสถานที่ขายก่อนสแกนสินค้า';
+                    const msg = 'กรุณาเลือกสถานที่ขายก่อน';
                     if (scanErrorDiv) scanErrorDiv.textContent = msg; else alert(msg);
                     this.focus(); return;
                 }
@@ -355,36 +333,27 @@
 
                 try {
                     const response = await fetch(`/api/products/lookup-by-scan/${encodeURIComponent(scanCode)}`);
-                    const productData = await response.json(); // Expect JSON response
+                    const productData = await response.json();
 
                     if (response.ok && productData && productData.id) {
-                        // Ensure all needed data is present before adding
                         addItemToSale(
-                            productData.id,
-                            productData.name, // Check if present
-                            productData.sku,  // Check if present
-                            1,
-                            parseFloat(productData.price_b2c || 0), // Check if present
-                            productData.barcode
+                            productData.id, productData.name, productData.sku, 1,
+                            parseFloat(productData.price_b2c || 0), productData.barcode
                         );
-                        this.value = ''; // Clear input on success
+                        this.value = '';
                         if(scanErrorDiv) scanErrorDiv.textContent = '';
                     } else {
-                        // Handle cases where API returns OK but no product (productData is null)
-                        // or API returns not OK (404, 500 etc.)
-                        const detail = productData ? (productData.detail || 'ไม่พบข้อมูล') : 'No data received';
+                        const detail = productData ? (productData.detail || 'ไม่พบข้อมูล') : 'No data';
                         const errorMsg = `ไม่พบสินค้า [${scanCode}] (${response.status})`;
                         if (scanErrorDiv) scanErrorDiv.textContent = errorMsg; else alert(errorMsg);
                         console.warn("Product lookup failed:", response.status, detail);
                     }
                 } catch (error) {
-                    const errorMsg = "เกิดข้อผิดพลาดในการเชื่อมต่อ (Scan)";
+                    const errorMsg = "เกิดข้อผิดพลาด (Scan)";
                     if (scanErrorDiv) scanErrorDiv.textContent = errorMsg; else alert(errorMsg);
-                    console.error("Network or other error during scan lookup:", error);
+                    console.error("Scan lookup error:", error);
                 } finally {
-                    this.disabled = false;
-                    this.select(); // Select text for easy next scan
-                    this.focus();
+                    this.disabled = false; this.select(); this.focus();
                 }
             }
         });
@@ -395,41 +364,31 @@
         posForm.addEventListener('submit', function(event) {
             const selectedLocation = document.querySelector('input[name="location_id"]:checked');
             if (!selectedLocation) {
-                alert('กรุณาเลือกสถานที่ขาย');
-                event.preventDefault(); return;
+                alert('กรุณาเลือกสถานที่ขาย'); event.preventDefault(); return;
             }
             const hiddenItems = saleItemsDataContainer.querySelectorAll('input[name="item_product_id"]');
             if (hiddenItems.length === 0) {
-                alert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการก่อนบันทึกการขาย');
-                event.preventDefault();
+                alert('กรุณาเพิ่มรายการสินค้าก่อนบันทึก'); event.preventDefault();
             }
+            // Add validation for quantity > 0 here if needed by iterating hidden inputs
         });
     }
 
     // --- Initial Load Logic ---
     document.addEventListener('DOMContentLoaded', function() {
         const firstActiveCategoryTab = document.querySelector('.category-tabs .nav-link.active');
-        if (firstActiveCategoryTab) {
-            loadProductsForCategory(firstActiveCategoryTab.dataset.categoryId);
-        } else if (categoryTabs.length > 0) {
-            // Ensure Bootstrap's Tab component is available if needed
+        if (firstActiveCategoryTab) { loadProductsForCategory(firstActiveCategoryTab.dataset.categoryId); }
+        else if (categoryTabs.length > 0) {
             if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-                 try { new bootstrap.Tab(categoryTabs[0]).show(); } catch (e) { console.error("Failed to init Bootstrap Tab:", e); }
-            } else { // Fallback if Bootstrap JS not loaded correctly
-                 categoryTabs[0].classList.add('active');
-                 loadProductsForCategory(categoryTabs[0].dataset.categoryId);
-            }
+                 try { new bootstrap.Tab(categoryTabs[0]).show(); }
+                 catch (e) { console.error("Failed init Tab:", e); categoryTabs[0].classList.add('active'); loadProductsForCategory(categoryTabs[0].dataset.categoryId); }
+            } else { categoryTabs[0].classList.add('active'); loadProductsForCategory(categoryTabs[0].dataset.categoryId); }
         }
-         // Add event listener for tab shown to load products
          categoryTabs.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', function(event) {
-                loadProductsForCategory(event.target.dataset.categoryId);
-            });
-        });
-        if (scanInput) {
-            scanInput.focus(); // Auto-focus scan input
-        }
-        // Add initial event listeners for any dynamically added remove buttons
+            tab.addEventListener('shown.bs.tab', function(event) { loadProductsForCategory(event.target.dataset.categoryId); });
+         });
+        if (scanInput) { scanInput.focus(); }
+        // Use event delegation for remove buttons
         saleItemsTableBody.addEventListener('click', handleRemoveItemClick);
     });
 

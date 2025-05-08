@@ -31,21 +31,22 @@
 
 {# --- แถวแสดง KPI Cards --- #}
 <div class="row">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary kpi-card"> {# ใช้ class จาก hitech_theme.css #}
+    {# Added col-12 for consistent stacking base #}
+    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+        <div class="card border-left-primary kpi-card h-100"> {# Add h-100 for consistent height if needed #}
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="card-title">ยอดขาย (วันนี้)</div>
                         <div id="kpi-today-sales" class="kpi-value"><span class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></span></div>
                     </div>
-                    <div class="col-auto"> <i class="bi bi-cash-coin kpi-icon"></i> </div> {# icon ใช้สีจาก theme #}
+                    <div class="col-auto"> <i class="bi bi-cash-coin kpi-icon"></i> </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-4">
-         <div class="card border-left-success kpi-card">
+    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+         <div class="card border-left-success kpi-card h-100">
              <div class="card-body">
                  <div class="row no-gutters align-items-center">
                      <div class="col mr-2">
@@ -57,8 +58,8 @@
              </div>
          </div>
      </div>
-     <div class="col-xl-3 col-md-6 mb-4">
-         <div class="card border-left-danger kpi-card position-relative">
+     <div class="col-12 col-sm-6 col-xl-3 mb-4">
+         <div class="card border-left-danger kpi-card position-relative h-100">
              <div class="card-body">
                  <div class="row no-gutters align-items-center">
                      <div class="col mr-2">
@@ -72,8 +73,8 @@
              <a href="#" class="stretched-link" title="ดูรายงานสต็อกติดลบ (ยังไม่สร้าง)"></a>
          </div>
      </div>
-     <div class="col-xl-3 col-md-6 mb-4">
-         <div class="card border-left-warning kpi-card position-relative">
+     <div class="col-12 col-sm-6 col-xl-3 mb-4">
+         <div class="card border-left-warning kpi-card position-relative h-100">
              <div class="card-body">
                  <div class="row no-gutters align-items-center">
                      <div class="col mr-2">
@@ -91,7 +92,8 @@
 
 {# --- แถวแสดงกราฟ --- #}
 <div class="row">
-    <div class="col-lg-7 mb-4">
+     {# Added col-12 for stacking #}
+    <div class="col-12 col-lg-7 mb-4">
         <div class="card chart-card">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0">แนวโน้มยอดขาย (7 วันย้อนหลัง)</h6>
@@ -103,7 +105,8 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-5 mb-4">
+     {# Added col-12 for stacking #}
+    <div class="col-12 col-lg-5 mb-4">
         <div class="card chart-card">
             <div class="card-header py-3">
                 <h6 class="m-0">สินค้าขายดี (7 วัน, ตามจำนวน)</h6>
@@ -118,27 +121,28 @@
 </div>
 {# --- แถวแสดงตารางข้อมูลด่วน --- #}
 <div class="row">
-     <div class="col-lg-6 mb-4">
+     {# Added col-12 for stacking #}
+     <div class="col-12 col-lg-6 mb-4">
          <div class="card">
              <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0">สินค้าสต็อกเหลือน้อย (<= 5 ชิ้น)</h6>
              </div>
              <div class="card-body p-0">
-                  <div id="low-stock-table-container" class="table-responsive">
+                  <div id="low-stock-table-container" class="table-responsive"> {# Added table-responsive #}
                        <div class="loading-placeholder p-3">กำลังโหลด...</div>
                   </div>
              </div>
          </div>
      </div>
-     <div class="col-lg-6 mb-4">
+      {# Added col-12 for stacking #}
+     <div class="col-12 col-lg-6 mb-4">
           <div class="card">
               <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0">รายการเคลื่อนไหวล่าสุด</h6>
-                {# ใช้ Hardcoded URL #}
                 <a href="/ui/inventory/transactions/" class="btn btn-sm btn-outline-secondary">ดูทั้งหมด</a>
               </div>
               <div class="card-body p-0">
-                   <div id="recent-transactions-table-container" class="table-responsive">
+                   <div id="recent-transactions-table-container" class="table-responsive"> {# Added table-responsive #}
                        <div class="loading-placeholder p-3">กำลังโหลด...</div>
                    </div>
               </div>
@@ -151,7 +155,8 @@
 {# ApexCharts JS #}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
-    // --- Helper Functions ---
+    // ... (JavaScript เดิมสำหรับ Dashboard ไม่ต้องแก้ไข) ...
+        // --- Helper Functions ---
     function formatCurrency(value, showUnit = true) {
         const formatted = (value != null ? parseFloat(value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00');
         return showUnit ? formatted + ' บาท' : formatted;
@@ -207,13 +212,13 @@
                 theme: { mode: 'dark', palette: 'palette1' }, // Use dark theme and palette
                 series: chartSeries,
                 xaxis: { categories: chartCategories, labels: { rotate: -45, style: { colors: 'var(--hitech-text-secondary)', fontSize: '10px' }, trim: true }, axisBorder: {show: false}, axisTicks: {show: false}, tooltip: { theme: 'dark'} },
-                yaxis: { labels: { formatter: function (val) { return val.toLocaleString('th-TH'); }, style: { colors: 'var(--hitech-text-secondary)'} }, show: false },
+                yaxis: { labels: { formatter: function (val) { return val.toLocaleString('th-TH'); }, style: { colors: 'var(--hitech-text-secondary)'} }, show: true }, // Keep Y axis visible for context
                 stroke: { curve: 'smooth', width: 3, colors: ['var(--hitech-accent)'] },
                 fill: { type: 'gradient', gradient: { shade: 'dark', type: "vertical", shadeIntensity: 0.5, gradientToColors: undefined, inverseColors: false, opacityFrom: 0.7, opacityTo: 0.1, stops: [0, 100] } },
                 tooltip: { theme: 'dark', y: { formatter: function (val) { return formatCurrency(val); } }, x: { formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? new Date(apiData[dataPointIndex].date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok'}) : val; } } },
                 dataLabels: { enabled: false }, markers: { size: 0 },
-                grid: { show: true, borderColor: 'var(--hitech-border)', strokeDashArray: 4, padding: { left: 10, right: 10} },
-                responsive: [{ breakpoint: 576, options: { xaxis: { labels: { rotate: 0, trim: false }} } }]
+                grid: { show: true, borderColor: 'var(--hitech-border)', strokeDashArray: 4, padding: { left: 0, right: 10} }, // Reduce left padding
+                responsive: [{ breakpoint: 768, options: { xaxis: { labels: { rotate: 0, trim: true, style: { fontSize: '9px' } }}, yaxis: {labels:{style:{fontSize:'9px'}}} } }, { breakpoint: 576, options: { xaxis: { labels: {show:false} }, yaxis:{show:false}, chart:{height:250} }}] // Hide labels on very small screens
             };
             chartElement.innerHTML = ''; var chart = new ApexCharts(chartElement, options); chart.render();
         } catch (error) { console.error("Error rendering sales trend chart:", error); if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger-neon small p-3">ไม่สามารถโหลดกราฟยอดขายได้</p>'; }
@@ -239,7 +244,8 @@
                 plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4, distributed: true, dataLabels: { position: 'bottom'} } },
                 colors: undefined, // Let palette handle distributed colors
                 dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '11px' }, formatter: function(val, opt) { return opt.w.globals.labels[opt.dataPointIndex] + ":  " + formatNumber(val) }, offsetX: 5, dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 } },
-                tooltip: { theme: 'dark', enabled: false }, grid: { show: false }, legend: { show: false }
+                tooltip: { theme: 'dark', enabled: true, x: { show: false }, y: { title: { formatter: (seriesName, opt) => opt.w.globals.labels[opt.dataPointIndex] }, formatter: (val) => formatNumber(val) + ' ชิ้น' } }, // Enable tooltip but hide x-axis label
+                grid: { show: false }, legend: { show: false }
             };
             chartElement.innerHTML = ''; var chart = new ApexCharts(chartElement, options); chart.render();
         } catch (error) { console.error("Error rendering top products chart:", error); if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger-neon small p-3">ไม่สามารถโหลดกราฟสินค้าขายดีได้</p>'; }
@@ -256,7 +262,7 @@
             let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>';
             items.forEach(item => {
                  const editUrl = `/ui/products/edit/${item.product_id}`; // Use hardcoded URL base
-                tableHtml += `<tr><td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} (${item.product_sku})</a></td><td class="text-end"><span class="badge bg-warning text-dark">${formatNumber(item.value)}</span></td></tr>`;
+                tableHtml += `<tr><td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} <small class="text-muted">(${item.product_sku})</small></a></td><td class="text-end"><span class="badge bg-warning text-dark">${formatNumber(item.value)}</span></td></tr>`;
             });
             tableHtml += '</tbody></table>';
             container.innerHTML = tableHtml;
@@ -277,20 +283,19 @@
                  let typeBadge = '';
                  let typeText = tx.transaction_type.replace(/_/g, ' ').toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
                  if(tx.transaction_type === 'STOCK_IN') typeBadge = `<span class="badge text-bg-success">${typeText}</span>`;
-                 else if (tx.transaction_type === 'SALE') typeBadge = `<span class="badge text-bg-primary">${typeText}</span>`; // Primary uses accent color
+                 else if (tx.transaction_type === 'SALE') typeBadge = `<span class="badge text-bg-primary">${typeText}</span>`;
                  else if (tx.transaction_type.includes('ADJUSTMENT')) typeBadge = `<span class="badge text-bg-warning text-dark">${typeText}</span>`;
                  else if (tx.transaction_type.includes('TRANSFER')) typeBadge = `<span class="badge text-bg-secondary">${typeText}</span>`;
                  else typeBadge = `<span class="badge text-bg-light text-dark">${typeText}</span>`;
                  const notesHtml = tx.notes ? `<small class="text-muted d-block ms-1 fst-italic" style="font-size: 0.8em;">Note: ${tx.notes.substring(0, 50)}${tx.notes.length > 50 ? '...' : ''}</small>` : '';
-                 // *** เรียกใช้ formatDateTime ที่เราแก้ไขแล้ว ***
-                 const formattedDate = formatDateTime(tx.transaction_date);
+                 const formattedDate = formatDateTime(tx.transaction_date); // Use the helper
                  tableHtml += `
                      <tr>
                          <td>
                              ${typeBadge}
                              <strong class="ms-2">${tx.product_name || 'N/A'}</strong>
                              <small class="text-muted d-block ms-1" style="font-size: 0.8em;">
-                               <i class="bi bi-geo-alt-fill"></i> ${tx.location_name || 'N/A'} @ ${formattedDate} {# <-- ใช้ Formatted Date #}
+                               <i class="bi bi-geo-alt-fill"></i> ${tx.location_name || 'N/A'} @ ${formattedDate}
                              </small>
                              ${notesHtml}
                          </td>
