@@ -2,82 +2,83 @@
 
 {% block title %}รอบนับสต็อก #{{ session.id }} - {{ session.location.name }}{% endblock %}
 
+{% block head_extra %}
+<style>
+    .count-input { min-width: 100px; /* ให้ช่องกรอกกว้างพอ */ }
+    .difference-cell.positive { color: var(--hitech-success); font-weight: bold; }
+    .difference-cell.negative { color: var(--hitech-danger); font-weight: bold; }
+</style>
+{% endblock %}
+
+
 {% block content %}
 
-{# ---- ส่วนแสดง Message ---- #}
-{% set message = request.query_params.get('message') %}
-{% if message %}
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
-{% set error = request.query_params.get('error') %}
-{% if error %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        ข้อผิดพลาด: {{ error }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
-{# ------------------------ #}
+{% include '_alert_messages.html' %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
      <h1>รอบนับสต็อก #{{ session.id }}</h1>
-     <a href="{{ url_for('ui_list_stock_count_sessions') }}" class="btn btn-secondary btn-sm">กลับไปรายการรอบนับ</a> {# ใช้ url_for #}
+     {# ใช้ Hardcoded URL #}
+     <a href="/ui/stock-counts/sessions/" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>กลับไปรายการ</a>
 </div>
 
 {# --- แสดงข้อมูล Session --- #}
 <div class="card mb-4">
-    <div class="card-header">
-        ข้อมูลรอบนับ
-    </div>
+    <div class="card-header">ข้อมูลรอบนับ</div>
     <div class="card-body">
          <p><strong>สถานที่:</strong> {{ session.location.name if session.location else 'N/A' }}</p>
-         <p><strong>วันที่เริ่ม:</strong> {{ session.start_date.strftime('%Y-%m-%d %H:%M') if session.start_date else '-'}}</p>
-         <p><strong>วันที่สิ้นสุด/ยกเลิก:</strong> {{ session.end_date.strftime('%Y-%m-%d %H:%M') if session.end_date else '-'}}</p> {# เปลี่ยน Label #}
+         {# *** ใช้ thaitime filter *** #}
+         <p><strong>วันที่เริ่ม:</strong> {{ session.start_date | thaitime }}</p>
+         <p><strong>วันที่สิ้นสุด/ยกเลิก:</strong> {{ session.end_date | thaitime }}</p>
          <p><strong>สถานะ:</strong>
-              <span class="badge {% if session.status.value == 'OPEN' %} bg-secondary {% elif session.status.value == 'COUNTING' %} bg-info text-dark {% elif session.status.value == 'CLOSED' %} bg-success {% elif session.status.value == 'CANCELED' %} bg-danger {% else %} bg-light text-dark {% endif %}">
+              <span class="badge rounded-pill {% if session.status.value == 'OPEN' %} text-bg-secondary {% elif session.status.value == 'COUNTING' %} text-bg-info {% elif session.status.value == 'CLOSED' %} text-bg-success {% elif session.status.value == 'CANCELED' %} text-bg-danger {% else %} text-bg-light text-dark {% endif %}">
                      {{ session.status.value }}
               </span>
          </p>
          <p><strong>หมายเหตุ:</strong> {{ session.notes if session.notes else '-' }}</p>
          {# --- ปุ่ม Actions สำหรับ Session --- #}
-         <div class="mt-2 d-flex gap-2 flex-wrap"> {# เพิ่ม flex-wrap #}
-             {# ปุ่มเริ่มนับ (แสดงเมื่อสถานะ OPEN) #}
+         <div class="mt-2 d-flex gap-2 flex-wrap">
              {% if session.status.value == 'OPEN' %}
-             <form method="post" action="{{ url_for('ui_start_counting_session', session_id=session.id) }}"> {# ใช้ url_for #}
+             <form method="post" action="/ui/stock-counts/sessions/{{ session.id }}/start-counting">
                  <button type="submit" class="btn btn-warning btn-sm">เริ่มดำเนินการนับ</button>
              </form>
              {% endif %}
-
-             {# ปุ่มปิดรอบนับ (แสดงเมื่อสถานะ COUNTING) #}
              {% if session.status.value == 'COUNTING' %}
-             <form method="post" action="{{ url_for('ui_handle_close_session', session_id=session.id) }}" {# ใช้ url_for #}
+             <form method="post" action="/ui/stock-counts/sessions/{{ session.id }}/close"
                    onsubmit="return confirm('ยืนยันการปิดรอบนับ? ระบบจะสร้างรายการปรับปรุงสต็อกอัตโนมัติสำหรับส่วนต่าง และไม่สามารถแก้ไขรอบนับนี้ได้อีก');">
                  <button type="submit" class="btn btn-success btn-sm">ปิดรอบนับ / สร้าง Adjustment</button>
              </form>
              {% endif %}
-
-             {# --- เพิ่มปุ่ม ยกเลิก (แสดงเมื่อสถานะ OPEN หรือ COUNTING) --- #}
              {% if session.status.value == 'OPEN' or session.status.value == 'COUNTING' %}
-                <form method="post" action="{{ url_for('ui_handle_cancel_session', session_id=session.id) }}" {# ใช้ url_for ชี้ไป route ใหม่ #}
+                <form method="post" action="/ui/stock-counts/sessions/{{ session.id }}/cancel"
                       onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกรอบนับสต็อกนี้? การยกเลิกจะไม่สามารถย้อนกลับได้');">
                      <button type="submit" class="btn btn-danger btn-sm">ยกเลิกรอบนับ</button>
                 </form>
              {% endif %}
-             {# --------------------------------------------------------- #}
          </div>
     </div>
 </div>
 
 {# --- ส่วนเพิ่มสินค้าเข้ารอบนับ (แสดงเมื่อสถานะ OPEN หรือ COUNTING) --- #}
-{% if session.status.value == 'OPEN' or session.status.value == 'COUNTING' %} {# แก้ไขเงื่อนไขนี้ด้วย #}
+{% if session.status.value == 'OPEN' or session.status.value == 'COUNTING' %}
 <div class="card mb-4">
      <div class="card-header">เพิ่มสินค้าเข้ารอบนับ</div>
      <div class="card-body">
-         <form id="add-item-form" method="post" action="{{ url_for('ui_handle_add_item_to_session', session_id=session.id) }}" class="row g-2 align-items-end"> {# ใช้ url_for #}
-             <div class="col-md-4"> <label for="category_select_count" class="form-label">หมวดหมู่</label> <select class="form-select form-select-sm" id="category_select_count"> <option value="">-- เลือกหมวดหมู่ --</option> {% for category in categories %} <option value="{{ category.id }}">{{ category.name }}</option> {% endfor %} </select> </div>
-             <div class="col-md-6"> <label for="product_select_count" class="form-label">สินค้า</label> <select class="form-select form-select-sm" id="product_select_count" name="product_id" required disabled> <option value="">-- เลือกหมวดหมู่ก่อน --</option> </select> </div>
+         {# ใช้ Hardcoded URL สำหรับ action #}
+         <form id="add-item-form" method="post" action="/ui/stock-counts/sessions/{{ session.id }}/items/add" class="row g-2 align-items-end">
+             {# ใช้ Floating Labels #}
+             <div class="col-md-4 form-floating">
+                 <select class="form-select" id="category_select_count" aria-label="เลือกหมวดหมู่">
+                     <option value="" selected>-- เลือกหมวดหมู่ --</option>
+                     {% for category in categories %} <option value="{{ category.id }}">{{ category.name }}</option> {% endfor %}
+                 </select>
+                 <label for="category_select_count">หมวดหมู่</label>
+             </div>
+             <div class="col-md-6 form-floating">
+                 <select class="form-select" id="product_select_count" name="product_id" required disabled aria-label="เลือกสินค้า">
+                     <option value="">-- เลือกหมวดหมู่ก่อน --</option>
+                 </select>
+                 <label for="product_select_count">สินค้า</label>
+             </div>
              <div class="col-md-2"> <button type="submit" class="btn btn-primary btn-sm w-100">เพิ่มสินค้า</button> </div>
          </form>
      </div>
@@ -85,46 +86,52 @@
  {% endif %}
 
 {# --- ตารางรายการสินค้าในรอบนับ (ใส่ form ครอบสำหรับ update counts) --- #}
-<form id="count-form" method="post" action="{{ url_for('ui_handle_update_counts', session_id=session.id) }}"> {# ใช้ url_for #}
+{# ใช้ Hardcoded URL สำหรับ action #}
+<form id="count-form" method="post" action="/ui/stock-counts/sessions/{{ session.id }}/update-counts">
     <h5>รายการสินค้าในรอบนับนี้</h5>
-    <div class="table-responsive">
-        <table class="table table-sm table-bordered">
-            <thead class="table-light">
-                <tr>
-                    <th>สินค้า (SKU)</th>
-                    <th class="text-end">ยอดในระบบ</th>
-                    <th class="text-center" style="min-width: 120px;">ยอดนับจริง</th>
-                    <th class="text-end">ส่วนต่าง</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if session.items %}
-                    {% for item in session.items %}
-                    <tr>
-                        <td>{{ item.product.name if item.product else 'N/A' }} ({{ item.product.sku if item.product else 'N/A' }})</td>
-                        <td class="text-end">{{ item.system_quantity }}</td>
-                        <td>
-                           <input type="number" min="0" step="1" class="form-control form-control-sm text-end"
-                                  name="count_for_{{ item.id }}"
-                                  value="{{ item.counted_quantity if item.counted_quantity is not none else '' }}"
-                                  placeholder="กรอกยอดนับ"
-                                  {# Disable ถ้าไม่ใช่ COUNTING เท่านั้น #}
-                                  {% if session.status.value != 'COUNTING' %}disabled{% endif %}>
-                        </td>
-                        <td class="text-end
-                           {% if item.difference is not none and item.difference > 0 %} text-success
-                           {% elif item.difference is not none and item.difference < 0 %} text-danger
-                           {% endif %}">
-                           {{ "{:+}".format(item.difference) if item.difference is not none else '-' }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                 {% else %}
-                     <tr> <td colspan="4" class="text-center text-muted">ยังไม่มีสินค้าในรอบนับนี้</td> </tr>
-                 {% endif %}
-            </tbody>
-        </table>
-    </div>
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0 align-middle"> {# mb-0 #}
+                    <thead class="sticky-top">
+                        <tr>
+                            <th>สินค้า (SKU)</th>
+                            <th class="text-end">ยอดในระบบ</th>
+                            <th class="text-center" style="min-width: 120px;">ยอดนับจริง</th>
+                            <th class="text-end">ส่วนต่าง</th>
+                            <th class="text-center">วันที่นับ</th> {# <-- Header #}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if session.items %}
+                            {% for item in session.items %}
+                            <tr>
+                                <td>{{ item.product.name if item.product else 'N/A' }} <small class="text-muted">({{ item.product.sku if item.product else 'N/A' }})</small></td>
+                                <td class="text-end">{{ item.system_quantity }}</td>
+                                <td>
+                                   <input type="number" min="0" step="1" class="form-control form-control-sm text-end count-input"
+                                          name="count_for_{{ item.id }}"
+                                          value="{{ item.counted_quantity if item.counted_quantity is not none else '' }}"
+                                          placeholder="กรอกยอดนับ"
+                                          {# Disable ถ้าไม่ใช่ COUNTING เท่านั้น #}
+                                          {% if session.status.value != 'COUNTING' %}disabled{% endif %}>
+                                </td>
+                                <td class="text-end difference-cell {% if item.difference is not none and item.difference > 0 %} positive {% elif item.difference is not none and item.difference < 0 %} negative {% endif %}">
+                                   {{ "{:+}".format(item.difference) if item.difference is not none else '-' }}
+                                </td>
+                                {# *** ใช้ thaitime filter สำหรับ count_date *** #}
+                                <td class="text-center date-cell">{{ item.count_date | thaitime(format='%d/%m/%y %H:%M') }}</td> {# <-- ใช้ format สั้น #}
+                            </tr>
+                            {% endfor %}
+                         {% else %}
+                             <tr> <td colspan="5" class="text-center text-muted p-4">ยังไม่มีสินค้าในรอบนับนี้</td> </tr> {# เพิ่ม padding #}
+                         {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div> {# End card-body #}
+    </div> {# End card #}
+
     {# ปุ่มบันทึกยอดนับทั้งหมด (แสดงเมื่อสถานะ COUNTING และมี items) #}
     {% if session.status.value == 'COUNTING' and session.items %}
          <button type="submit" class="btn btn-primary mt-3">บันทึกยอดนับทั้งหมด</button>

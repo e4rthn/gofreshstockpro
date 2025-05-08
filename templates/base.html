@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" data-bs-theme="dark"> {# ใช้ Dark theme ของ Bootstrap #}
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,33 +10,21 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <style>
-        body { font-family: 'Sarabun', sans-serif; padding-top: 56px; background-color: #f8f9fa; }
-        .wrapper { display: flex; flex-direction: column; min-height: 100vh; }
-        .content-container { flex: 1 0 auto; padding-top: 1.5rem; padding-bottom: 1.5rem; }
-        .footer { flex-shrink: 0; padding: 1rem 0; background-color: #e9ecef; }
-        .navbar-brand { font-weight: 700; }
-        .nav-link { font-size: 0.95rem; }
-        .dropdown-item { font-size: 0.9rem; }
-        /* Add active state style for dropdown items */
-        .dropdown-item.active, .dropdown-item:active {
-            color: #fff;
-            text-decoration: none;
-            background-color: var(--bs-primary); /* Use Bootstrap primary color */
-        }
-        /* Ensure dropdown menus have sufficient z-index if overlapping occurs */
-        .dropdown-menu { z-index: 1021; } /* Bootstrap's default is 1000, navbar is 1030 */
+    {# --- Link ไปยัง CSS ธีม Hi-tech --- #}
+    {# ตรวจสอบว่า Path ถูกต้อง และไฟล์ CSS โหลดได้จริงใน Browser DevTools #}
+    <link rel="stylesheet" href="{{ request.app.url_path_for('static', path='/css/hitech_theme.css') }}">
 
-    </style>
-    {% block head_extra %}{% endblock %}
+    {% block head_extra %}{% endblock %} {# สำหรับใส่ CSS/JS เพิ่มเติมเฉพาะหน้า #}
 </head>
 <body>
     <div class="wrapper">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-success sticky-top shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-hitech sticky-top"> {# ใช้ class จาก hitech_theme.css #}
             <div class="container-fluid">
-                <a class="navbar-brand" href="{{ request.app.url_path_for('ui_root_redirect') }}">
+                {# *** ใช้ Hardcoded URL สำหรับ Navbar Brand ไปก่อน *** #}
+                {# ชี้ไปที่ root ซึ่ง main.py จะ redirect ไป dashboard #}
+                <a class="navbar-brand" href="/">
                     <i class="bi bi-box-seam-fill me-2"></i>GoFresh StockPro
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,82 +32,47 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        {# --- Dashboard Link --- #}
+                        {# *** ใช้ Hardcoded URLs สำหรับลิงก์อื่นๆ *** #}
                         <li class="nav-item">
-                             <a class="nav-link {% if request.url.path == request.app.url_path_for('ui_dashboard') %}active{% endif %}"
-                                href="{{ request.app.url_path_for('ui_dashboard') }}">
+                             <a class="nav-link {% if request.url.path.startswith('/ui/dashboard') %}active{% endif %}"
+                                href="/ui/dashboard/"> {# <-- Hardcoded path #}
                                  <i class="bi bi-speedometer2 me-1"></i>Dashboard
                              </a>
                          </li>
-                        {# -------------------- #}
                         <li class="nav-item">
-                            {# Adjusted active check for POS #}
-                            <a class="nav-link {% if request.url.path == request.app.url_path_for('ui_show_pos_form') %}active{% endif %}"
-                               href="{{ request.app.url_path_for('ui_show_pos_form') }}">
+                            {# ตรวจสอบว่า path นี้ถูกต้องตามที่กำหนดใน routers/ui/sales.py #}
+                            <a class="nav-link {% if request.url.path.startswith('/ui/pos') %}active{% endif %}" href="/ui/pos/"> {# <-- Hardcoded path #}
                                 <i class="bi bi-cart-plus me-1"></i>ขาย (POS)
                             </a>
                         </li>
                          <li class="nav-item dropdown">
-                             {# Adjusted active check for Inventory Management #}
-                             <a class="nav-link dropdown-toggle
-                                {% if request.url.path.startswith('/ui/inventory') or request.url.path.startswith('/ui/stock-counts') %}active{% endif %}"
-                                href="#" id="navbarDropdownInventory" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-boxes me-1"></i>จัดการสต็อก
-                            </a>
+                             <a class="nav-link dropdown-toggle {% if request.url.path.startswith('/ui/inventory') or request.url.path.startswith('/ui/stock-counts') %}active{% endif %}" href="#" id="navbarDropdownInventory" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <i class="bi bi-boxes me-1"></i>จัดการสต็อก </a>
                              <ul class="dropdown-menu" aria-labelledby="navbarDropdownInventory">
-                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_view_inventory_summary') %}active{% endif %}"
-                                        href="{{ request.app.url_path_for('ui_view_inventory_summary') }}">สรุปสต็อกคงคลัง</a></li>
-                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_show_stock_in_form') %}active{% endif %}"
-                                        href="{{ request.app.url_path_for('ui_show_stock_in_form') }}">รับสินค้าเข้า</a></li>
-                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_show_adjustment_form') %}active{% endif %}"
-                                        href="{{ request.app.url_path_for('ui_show_adjustment_form') }}">ปรับปรุงสต็อก</a></li>
-                                 <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_show_transfer_form') %}active{% endif %}"
-                                        href="{{ request.app.url_path_for('ui_show_transfer_form') }}">โอนย้ายสต็อก</a></li>
+                                 {# ตรวจสอบ path เหล่านี้ให้ตรงกับ prefix + path ใน routers/ui/inventory.py และ routers/ui/stock_count.py #}
+                                 <li><a class="dropdown-item" href="/ui/inventory/summary/">สรุปสต็อกคงคลัง</a></li>
+                                 <li><a class="dropdown-item" href="/ui/inventory/stock-in/">รับสินค้าเข้า</a></li>
+                                 <li><a class="dropdown-item" href="/ui/inventory/adjust/">ปรับปรุงสต็อก</a></li>
+                                 <li><a class="dropdown-item" href="/ui/inventory/transfer/">โอนย้ายสต็อก</a></li>
                                  <li><hr class="dropdown-divider"></li>
-                                 <li><a class="dropdown-item {% if request.url.path.startswith(request.app.url_path_for('ui_list_stock_count_sessions')) %}active{% endif %}"
-                                        href="{{ request.app.url_path_for('ui_list_stock_count_sessions') }}">ตรวจนับสต็อก</a></li>
+                                 <li><a class="dropdown-item {% if request.url.path.startswith('/ui/inventory/transactions') %}active{% endif %}" href="/ui/inventory/transactions/">ประวัติเคลื่อนไหวทั้งหมด</a></li>
+                                 <li><a class="dropdown-item" href="/ui/stock-counts/sessions/">ตรวจนับสต็อก</a></li>
                              </ul>
                          </li>
                          <li class="nav-item dropdown">
-                              {# Adjusted active check for Reports #}
-                              <a class="nav-link dropdown-toggle
-                                 {% set reports_base_path = '/ui/' %} {# Common prefix for most reports #}
-                                 {% if request.url.path == request.app.url_path_for('ui_sales_report') or
-                                      request.url.path == request.app.url_path_for('ui_near_expiry_report') or
-                                      request.url.path == request.app.url_path_for('ui_negative_stock_report') %}active{% endif %}"
-                                 href="#" id="navbarDropdownReports" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                 <i class="bi bi-file-earmark-bar-graph me-1"></i>รายงาน
-                              </a>
+                              <a class="nav-link dropdown-toggle {% if request.url.path.startswith('/ui/sales/report') or request.url.path.startswith('/ui/inventory/near-expiry') %}active{% endif %}" href="#" id="navbarDropdownReports" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <i class="bi bi-file-earmark-bar-graph me-1"></i>รายงาน </a>
                               <ul class="dropdown-menu" aria-labelledby="navbarDropdownReports">
-                                  <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_sales_report') %}active{% endif %}"
-                                         href="{{ request.app.url_path_for('ui_sales_report') }}">รายงานการขาย</a></li>
-                                  <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_near_expiry_report') %}active{% endif %}"
-                                         href="{{ request.app.url_path_for('ui_near_expiry_report') }}">สินค้าใกล้หมดอายุ</a></li>
-                                  {# --- Link to Negative Stock Report --- #}
-                                  <li><a class="dropdown-item {% if request.url.path == request.app.url_path_for('ui_negative_stock_report') %}active{% endif %}"
-                                         href="{{ request.app.url_path_for('ui_negative_stock_report') }}">
-                                         <i class="bi bi-exclamation-diamond-fill text-danger me-1"></i>สต็อกติดลบ
-                                      </a>
-                                  </li>
-                                  {# ----------------------------------- #}
+                                  {# ตรวจสอบ path เหล่านี้ #}
+                                  <li><a class="dropdown-item" href="/ui/sales/report/">รายงานการขาย</a></li>
+                                  <li><a class="dropdown-item" href="/ui/inventory/near-expiry/">สินค้าใกล้หมดอายุ</a></li>
                               </ul>
                           </li>
                         <li class="nav-item dropdown">
-                             {# Adjusted active check for Master Data #}
-                            <a class="nav-link dropdown-toggle
-                               {% if request.url.path.startswith('/ui/categories') or
-                                    request.url.path.startswith('/ui/products') or
-                                    request.url.path.startswith('/ui/locations') %}active{% endif %}"
-                               href="#" id="navbarDropdownDataManagement" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                               <i class="bi bi-database-gear me-1"></i>ข้อมูลหลัก
-                           </a>
+                            <a class="nav-link dropdown-toggle {% if request.url.path.startswith('/ui/categories') or request.url.path.startswith('/ui/products') or request.url.path.startswith('/ui/locations') %}active{% endif %}" href="#" id="navbarDropdownDataManagement" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <i class="bi bi-database-gear me-1"></i>ข้อมูลหลัก </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdownDataManagement">
-                                <li><a class="dropdown-item {% if request.url.path.startswith('/ui/categories') %}active{% endif %}"
-                                       href="{{ request.app.url_path_for('ui_read_all_categories') }}">หมวดหมู่สินค้า</a></li>
-                                <li><a class="dropdown-item {% if request.url.path.startswith('/ui/products') %}active{% endif %}"
-                                       href="{{ request.app.url_path_for('ui_read_all_products') }}">สินค้า</a></li>
-                                <li><a class="dropdown-item {% if request.url.path.startswith('/ui/locations') %}active{% endif %}"
-                                       href="{{ request.app.url_path_for('ui_read_all_locations') }}">สถานที่จัดเก็บ</a></li>
+                                {# ตรวจสอบ path เหล่านี้ #}
+                                <li><a class="dropdown-item" href="/ui/categories/">หมวดหมู่สินค้า</a></li>
+                                <li><a class="dropdown-item" href="/ui/products/">สินค้า</a></li>
+                                <li><a class="dropdown-item" href="/ui/locations/">สถานที่จัดเก็บ</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -128,17 +81,35 @@
         </nav>
 
         <div class="container-fluid content-container">
-            {% block content %}{% endblock %}
+            {# ส่วนแสดงข้อความ Alert (ถ้ามี) #}
+            {% set message = request.query_params.get('message') %}
+            {% if message %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+            {% set error = request.query_params.get('error') %}
+            {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>ข้อผิดพลาด:</strong> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+            {# --- สิ้นสุดส่วน Alert --- #}
+
+            {% block content %}{% endblock %} {# เนื้อหาหลักของแต่ละหน้าจะถูกแทรกตรงนี้ #}
         </div>
 
-        <footer class="footer mt-auto py-3 bg-light text-center text-muted border-top">
+        <footer class="footer footer-hitech mt-auto py-3 text-center"> {# ใช้ class จาก hitech_theme.css #}
             <div class="container">
-                 <p class="mb-0 small">&copy; {{ current_year }} GoFresh StockPro</p>
+                <p class="mb-0 small">&copy; {{ current_year }} GoFresh StockPro</p>
             </div>
         </footer>
     </div>
 
+    {# --- Scripts --- #}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    {% block scripts_extra %}{% endblock %}
+    {% block scripts_extra %}{% endblock %} {# สำหรับใส่ Script เพิ่มเติมเฉพาะหน้า #}
 </body>
 </html>

@@ -3,36 +3,34 @@
 {% block title %}แก้ไขสินค้า - {{ product.name }}{% endblock %}
 
 {% block content %}
-<h1>แก้ไขสินค้า: <span class="text-primary">{{ product.name }}</span> (SKU: {{ product.sku }})</h1>
+<h1>แก้ไขสินค้า: <span class="text-accent">{{ product.name }}</span> (SKU: {{ product.sku }})</h1>
 <hr>
 
-{% if error %}
-    <div class="alert alert-danger" role="alert">
-        ข้อผิดพลาด: {{ error }}
-    </div>
-{% endif %}
+{% if error %}<div class="alert alert-danger" role="alert">ข้อผิดพลาด: {{ error }}</div>{% endif %}
 
+{# ใช้ action ที่ถูกต้องตามโครงสร้าง router ใหม่ #}
 <form method="post" action="{{ request.app.url_path_for('ui_handle_edit_product_form', product_id=product.id) }}">
-     <div class="row g-3">
-        <div class="col-md-6 mb-3">
-            <label for="sku" class="form-label">SKU/รหัสสินค้า (ภายในร้าน) <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="sku" name="sku" required
-                   value="{{ form_data.sku if form_data is defined else product.sku }}">
+     <div class="row g-4"> {# <-- เพิ่ม Gap (g-4) #}
+
+        {# --- ใช้ form-floating --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <input type="text" class="form-control" id="sku" name="sku" required placeholder="SKU/รหัสสินค้า" value="{{ form_data.sku if form_data is defined else product.sku }}">
+            <label for="sku">SKU/รหัสสินค้า <span class="text-danger">*</span></label>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="barcode" class="form-label">บาร์โค้ดสากล (EAN/UPC - ถ้ามี)</label>
-            <input type="text" class="form-control" id="barcode" name="barcode"
-                   value="{{ form_data.barcode if form_data is defined and form_data.barcode is not none else (product.barcode if product.barcode is not none else '') }}">
+
+        <div class="col-md-6 form-floating mb-4">
+            <input type="text" class="form-control" id="barcode" name="barcode" placeholder="บาร์โค้ดสากล (ถ้ามี)" value="{{ form_data.barcode if form_data is defined and form_data.barcode is not none else (product.barcode if product.barcode is not none else '') }}">
+            <label for="barcode">บาร์โค้ดสากล (ถ้ามี)</label>
         </div>
-        <div class="col-md-12 mb-3"> {# Name full width #}
-            <label for="name" class="form-label">ชื่อสินค้า <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="name" name="name" required
-                   value="{{ form_data.name if form_data is defined else product.name }}">
+
+        <div class="col-12 form-floating mb-4">
+            <input type="text" class="form-control" id="name" name="name" required placeholder="ชื่อสินค้า" value="{{ form_data.name if form_data is defined else product.name }}">
+            <label for="name">ชื่อสินค้า <span class="text-danger">*</span></label>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="category_id" class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
-            <select class="form-select" id="category_id" name="category_id" required>
-                <option value="">-- เลือกหมวดหมู่ --</option>
+
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="category_id" name="category_id" required aria-label="เลือกหมวดหมู่">
+                {# Option แรกสุดอาจจะไม่จำเป็นถ้ามีค่าที่ถูกเลือกอยู่แล้ว #}
                 {% set current_category_id = (form_data.category_id|string if form_data is defined else product.category_id|string) %}
                 {% for category in categories %}
                     <option value="{{ category.id }}" {% if current_category_id == category.id|string %}selected{% endif %}>
@@ -40,34 +38,47 @@
                     </option>
                 {% endfor %}
             </select>
+             <label for="category_id">หมวดหมู่ <span class="text-danger">*</span></label>
         </div>
-         <div class="col-md-6 mb-3">
-            <label for="standard_cost" class="form-label">ต้นทุนมาตรฐาน</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="standard_cost" name="standard_cost"
-                   value="{{ form_data.standard_cost if form_data is defined and form_data.standard_cost is not none else (product.standard_cost if product.standard_cost is not none else '') }}">
-        </div>
-         <div class="col-md-6 mb-3">
-            <label for="price_b2c" class="form-label">ราคาขาย (B2C) <span class="text-danger">*</span></label>
-            <input type="number" step="0.01" min="0" class="form-control" id="price_b2c" name="price_b2c" required
-                   value="{{ form_data.price_b2c if form_data is defined else product.price_b2c }}">
-        </div>
-         <div class="col-md-6 mb-3">
-            <label for="price_b2b" class="form-label">ราคาขาย (B2B)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="price_b2b" name="price_b2b"
-                   value="{{ form_data.price_b2b if form_data is defined and form_data.price_b2b is not none else (product.price_b2b if product.price_b2b is not none else '') }}">
-        </div>
-        <div class="col-12 mb-3">
-            <label for="description" class="form-label">รายละเอียด</label>
-            <textarea class="form-control" id="description" name="description" rows="3">{{ form_data.description if form_data is defined and form_data.description is not none else (product.description if product.description is not none else '') }}</textarea>
-        </div>
-        <div class="col-12 mb-3">
-            <label for="image_url" class="form-label">URL รูปภาพ</label>
-            <input type="url" class="form-control" id="image_url" name="image_url"
-                   value="{{ form_data.image_url if form_data is defined and form_data.image_url is not none else (product.image_url if product.image_url is not none else '') }}">
-        </div>
-    </div>
 
-    <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
-    <a href="{{ request.app.url_path_for('ui_read_all_products') }}" class="btn btn-secondary">ยกเลิก</a>
+        <div class="col-md-6 form-floating mb-4">
+            <input type="number" min="0" step="1" class="form-control" id="shelf_life_days" name="shelf_life_days" placeholder="อายุสินค้า (วัน)" value="{{ form_data.shelf_life_days if form_data is defined and form_data.shelf_life_days is not none else (product.shelf_life_days if product.shelf_life_days is not none else '') }}">
+            <label for="shelf_life_days">อายุสินค้า (วัน)</label>
+             <div class="form-text position-absolute bottom-0 start-0 ms-2 mb-n4">เช่น 30, 90 (ถ้ามี)</div>
+        </div>
+
+        <div class="col-md-6 form-floating mb-4">
+           <input type="number" step="0.01" min="0" class="form-control" id="standard_cost" name="standard_cost" placeholder="ต้นทุนมาตรฐาน" value="{{ form_data.standard_cost if form_data is defined and form_data.standard_cost is not none else (product.standard_cost if product.standard_cost is not none else '') }}">
+           <label for="standard_cost">ต้นทุนมาตรฐาน</label>
+       </div>
+
+        <div class="col-md-6 form-floating mb-4">
+           <input type="number" step="0.01" min="0" class="form-control" id="price_b2c" name="price_b2c" required placeholder="ราคาขาย (B2C)" value="{{ form_data.price_b2c if form_data is defined else product.price_b2c }}">
+           <label for="price_b2c">ราคาขาย (B2C) <span class="text-danger">*</span></label>
+       </div>
+
+        <div class="col-md-6 form-floating mb-4">
+           <input type="number" step="0.01" min="0" class="form-control" id="price_b2b" name="price_b2b" placeholder="ราคาขาย (B2B)" value="{{ form_data.price_b2b if form_data is defined and form_data.price_b2b is not none else (product.price_b2b if product.price_b2b is not none else '') }}">
+            <label for="price_b2b">ราคาขาย (B2B)</label>
+       </div>
+
+        <div class="col-md-6 form-floating mb-4">
+           <input type="url" class="form-control" id="image_url" name="image_url" placeholder="URL รูปภาพ" value="{{ form_data.image_url if form_data is defined and form_data.image_url is not none else (product.image_url if product.image_url is not none else '') }}">
+           <label for="image_url">URL รูปภาพ</label>
+       </div>
+
+       <div class="col-12 form-floating mb-4">
+           <textarea class="form-control" id="description" name="description" placeholder="รายละเอียด" style="height: 100px">{{ form_data.description if form_data is defined and form_data.description is not none else (product.description if product.description is not none else '') }}</textarea>
+           <label for="description">รายละเอียด</label>
+       </div>
+       {# --- สิ้นสุดการใช้ form-floating --- #}
+
+    </div>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+        {# ใช้ Hardcoded URL หรือ url_path_for ถ้ามันทำงานได้แล้ว #}
+        <a href="/ui/products/" class="btn btn-secondary">ยกเลิก</a>
+        {# <a href="{{ request.app.url_path_for('ui_read_all_products') }}" class="btn btn-secondary">ยกเลิก</a> #}
+    </div>
 </form>
 {% endblock %}

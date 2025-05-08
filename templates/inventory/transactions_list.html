@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}ประวัติการเคลื่อนไหวสต็อก - GoFresh StockPro{% endblock %}
+
+{% block head_extra %}
+<style>
+    .filter-section { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--hitech-border); border-radius: 8px; background-color: var(--hitech-surface); }
+    .date-cell { font-size: 0.9em; color: var(--hitech-text-secondary); white-space: nowrap; }
+    .notes-cell { font-size: 0.85em; color: var(--hitech-text-secondary); font-style: italic; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+    .notes-cell:hover { white-space: normal; overflow: visible; }
+    .qty-positive { color: var(--hitech-success); font-weight: bold; }
+    .qty-negative { color: var(--hitech-danger); font-weight: bold; }
+    .filter-section .form-floating > label { font-size: 0.85rem; }
+    .table thead th { color: var(--hitech-accent); }
+    .table td, .table th { vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1><i class="bi bi-list-check me-2"></i>ประวัติการเคลื่อนไหวสต็อก</h1>
+     <a href="/ui/inventory/summary/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-table me-1"></i>กลับไปหน้าสรุป</a>
+</div>
+
+{% include '_alert_messages.html' %}
+
+{# --- Filter Form --- #}
+<form method="get" action="/ui/inventory/transactions/" class="filter-section">
+    <div class="row g-3 align-items-end">
+        {# Product Filter #}
+        <div class="col-lg-3 col-md-6 form-floating mb-3">
+            <select class="form-select" id="product_id" name="product_id" aria-label="กรองตามสินค้า">
+                <option value="" {% if not selected_product_id %}selected{% endif %}>-- ทุกสินค้า --</option>
+                {% for product in all_products | sort(attribute='name') %}
+                <option value="{{ product.id }}" {% if selected_product_id == product.id %}selected{% endif %}>
+                    {{ product.name }} ({{ product.sku }})
+                </option>
+                {% endfor %}
+            </select>
+            <label for="product_id">สินค้า</label>
+        </div>
+        {# Location Filter #}
+        <div class="col-lg-2 col-md-6 form-floating mb-3">
+            <select class="form-select" id="location_id" name="location_id" aria-label="กรองตามสถานที่">
+                <option value="" {% if not selected_location_id %}selected{% endif %}>-- ทุกสถานที่ --</option>
+                {% for location in all_locations | sort(attribute='name') %}
+                <option value="{{ location.id }}" {% if selected_location_id == location.id %}selected{% endif %}>
+                    {{ location.name }}
+                </option>
+                {% endfor %}
+            </select>
+             <label for="location_id">สถานที่</label>
+        </div>
+        {# Transaction Type Filter #}
+         <div class="col-lg-2 col-md-4 form-floating mb-3">
+            <select class="form-select" id="type" name="type" aria-label="กรองตามประเภท">
+                <option value="" {% if not selected_type %}selected{% endif %}>-- ทุกประเภท --</option>
+                {% for type_enum in all_transaction_types %}
+                <option value="{{ type_enum.name }}" {% if selected_type == type_enum.name %}selected{% endif %}>
+                    {{ type_enum.value }}
+                </option>
+                {% endfor %}
+            </select>
+             <label for="type">ประเภท</label>
+        </div>
+        {# Date Filters #}
+        <div class="col-lg-2 col-md-4 form-floating mb-3">
+            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}" placeholder=" ">
+            <label for="start_date">ตั้งแต่วันที่</label>
+        </div>
+        <div class="col-lg-2 col-md-4 form-floating mb-3">
+             <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}" placeholder=" ">
+            <label for="end_date">ถึงวันที่</label>
+        </div>
+        {# Action Buttons #}
+        <div class="col-lg-auto col-md-12 d-flex align-items-end gap-2 mb-3">
+            <input type="hidden" name="limit" value="{{ limit }}">
+            <button type="submit" class="btn btn-primary btn-sm">กรองข้อมูล</button>
+            <a href="/ui/inventory/transactions/?limit={{limit}}" class="btn btn-secondary btn-sm">ล้างค่า</a>
+        </div>
+    </div>
+</form>
+{# --- End Filter Form --- #}
+
+{# --- Display Count --- #}
+{% if total_count > 0 %}
+<p class="text-secondary mt-3">พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p>
+{% endif %}
+
+{# --- Transaction Table --- #}
+<div class="card mt-1">
+    <div class="card-body p-0">
+        {% if transactions %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                <thead class="sticky-top">
+                    <tr>
+                        <th>วันที่/เวลา (ไทย)</th>
+                        <th>ประเภท</th>
+                        <th>สินค้า (SKU)</th>
+                        <th>สถานที่</th>
+                        <th class="text-end">เปลี่ยนแปลง</th>
+                        <th>วันผลิต</th>
+                        <th>วันหมดอายุ</th>
+                        <th class="text-end">ต้นทุน/หน่วย</th>
+                        <th>หมายเหตุ</th>
+                        <th class="text-center">อ้างอิง</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx_dict in transactions %} {# <-- วนลูป List of Dicts #}
+                    <tr>
+                        {# *** แสดงผล String เวลา/วันที่ ที่ Format แล้ว *** #}
+                        <td class="date-cell">{{ tx_dict.transaction_date_formatted }}</td>
+                        <td>
+                            <span class="badge rounded-pill {% if tx_dict.transaction_type_value == 'STOCK_IN' %} text-bg-success {% elif tx_dict.transaction_type_value == 'SALE' %} text-bg-primary {% elif 'ADJUSTMENT' in tx_dict.transaction_type_value %} text-bg-warning text-dark {% elif 'TRANSFER' in tx_dict.transaction_type_value %} text-bg-secondary {% else %} text-bg-light text-dark {% endif %}">
+                               {{ tx_dict.transaction_type_value }}
+                           </span>
+                        </td>
+                        <td>
+                            {{ tx_dict.product_name }}
+                            <small class="text-muted d-block">({{ tx_dict.product_sku }})</small>
+                        </td>
+                        <td>{{ tx_dict.location_name }}</td>
+                        <td class="text-end {% if tx_dict.quantity_change > 0 %}qty-positive{% elif tx_dict.quantity_change < 0 %}qty-negative{% endif %}">
+                            {{ "{:+}".format(tx_dict.quantity_change) if tx_dict.quantity_change != 0 else tx_dict.quantity_change }}
+                        </td>
+                        <td class="date-cell">{{ tx_dict.production_date_formatted }}</td>
+                        <td class="date-cell">{{ tx_dict.expiry_date_formatted }}</td>
+                        <td class="text-end">{{ "%.2f"|format(tx_dict.cost_per_unit) if tx_dict.cost_per_unit is not none else '-' }}</td>
+                        <td class="notes-cell" title="{{ tx_dict.notes if tx_dict.notes else '' }}">{{ tx_dict.notes if tx_dict.notes else '-' }}</td>
+                        <td class="text-center date-cell">
+                            {% if tx_dict.transaction_type_value == 'SALE' %}
+                                Sale #{{ tx_dict.related_transaction_id if tx_dict.related_transaction_id else '-' }}
+                            {% elif tx_dict.transaction_type_value == 'TRANSFER_IN' %}
+                                Tx #{{ tx_dict.related_transaction_id if tx_dict.related_transaction_id else '-' }} (Out)
+                            {% elif tx_dict.transaction_type_value == 'TRANSFER_OUT' %}
+                                Tx #{{ tx_dict.id }} (In) {# Adjust if needed #}
+                            {% elif 'ADJUSTMENT' in tx_dict.transaction_type_value and tx_dict.notes and 'ตรวจนับสต็อก' in tx_dict.notes %}
+                                {% set parts = tx_dict.notes.split('#') %}
+                                {% if parts|length > 1 and parts[1].split()[0].isdigit() %}
+                                    {% set session_id = parts[1].split()[0] %}
+                                    <a href="/ui/stock-counts/sessions/{{ session_id }}" title="ดูรอบนับ #{{ session_id }}">รอบนับ #{{ session_id }}</a>
+                                {% else %} - {% endif %}
+                            {% else %} - {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted p-4 text-center">ไม่พบข้อมูลการเคลื่อนไหวสต็อกตามเงื่อนไข</p>
+        {% endif %}
+    </div>
+</div>
+{# --- End Transaction Table --- #}
+
+{# --- Pagination --- #}
+{% if total_pages > 1 %}
+<div class="mt-4 d-flex justify-content-center">
+    {% include '_pagination.html' %}
+</div>
+{% endif %}
+{# ---------------- #}
+
+{% endblock %}

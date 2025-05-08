@@ -17,6 +17,9 @@ class InventoryTransactionBase(BaseModel):
     notes: Optional[str] = None
     cost_per_unit: Optional[float] = None
     expiry_date: Optional[date] = None
+    # --- เพิ่ม production_date ---
+    production_date: Optional[date] = None
+    # ---------------------------
     related_transaction_id: Optional[int] = None
 
 class InventoryTransactionCreate(InventoryTransactionBase):

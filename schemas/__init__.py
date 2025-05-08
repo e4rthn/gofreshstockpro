@@ -23,4 +23,5 @@ from .dashboard import ( # Ensure the file name is dashboard.py
     CategoryDistributionItemSchema,
     RecentTransactionItemSchema
 )
+
 # -----------------------------

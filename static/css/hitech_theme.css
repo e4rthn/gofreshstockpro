@@ -1,0 +1,246 @@
+/* static/css/hitech_theme.css */
+
+/* กำหนดตัวแปรสีหลักสำหรับธีม Hi-tech (Dark - Green Accent) */
+:root {
+    --hitech-bg: #1a1d24; /* สีพื้นหลังหลัก (เทาเข้มเกือบดำ) */
+    --hitech-surface: #252a34; /* สีพื้นผิวของ Components เช่น Cards (เข้มรองลงมา) */
+    --hitech-surface-hover: #2f3542; /* สีพื้นผิวเมื่อ hover */
+    --hitech-border: #3a3f4b; /* สีเส้นขอบ */
+    --hitech-text-primary: #e8e8e8; /* สีตัวอักษรหลัก (ขาวนวล) */
+    --hitech-text-secondary: #a0a0b0; /* สีตัวอักษรรอง (เทาอมฟ้าเล็กน้อย) */
+    --hitech-accent: #00f9a0; /* สีเขียว Neon */
+    --hitech-accent-hover: #5ffdd1; /* สีเขียวสว่างขึ้นเมื่อ Hover */
+    --hitech-accent-secondary: #ff00c8; /* สี Accent รอง (ชมพู Neon - ถ้าต้องการ) */
+    --hitech-success: #00ff8c; /* เขียวเข้มกว่า Accent เล็กน้อย */
+    --hitech-warning: #ffdd00; /* เหลือง Neon สำหรับ Warning */
+    --hitech-danger: #ff375f; /* แดง Neon สำหรับ Danger */
+
+    /* Bootstrap Override */
+    --bs-body-bg: var(--hitech-bg);
+    --bs-body-color: var(--hitech-text-primary);
+    --bs-border-color: var(--hitech-border);
+    --bs-link-color: var(--hitech-accent);
+    --bs-link-hover-color: var(--hitech-accent-hover);
+    --bs-emphasis-color: var(--hitech-text-primary);
+    --bs-secondary-color: var(--hitech-text-secondary);
+    --bs-light-rgb: 37, 42, 52;
+    --bs-dark-rgb: 232, 232, 232;
+    --bs-primary: var(--hitech-accent);
+    --bs-primary-rgb: 0, 249, 160;
+    --bs-success: var(--hitech-success);
+    --bs-success-rgb: 0, 255, 140;
+    --bs-warning: var(--hitech-warning);
+    --bs-warning-rgb: 255, 221, 0;
+    --bs-danger: var(--hitech-danger);
+    --bs-danger-rgb: 255, 55, 95;
+    --bs-info: var(--hitech-accent-secondary);
+    --bs-info-rgb: 255, 0, 200;
+}
+
+body {
+    background-color: var(--hitech-bg);
+    color: var(--hitech-text-primary);
+    font-family: 'Sarabun', sans-serif;
+    padding-top: 60px; /* Adjust based on final navbar height */
+    line-height: 1.6;
+}
+
+.wrapper { display: flex; flex-direction: column; min-height: 100vh; }
+.content-container { flex: 1 0 auto; padding-top: 2rem; padding-bottom: 2rem; }
+
+/* Navbar Styling (เหมือนเดิมจากครั้งก่อน) */
+.navbar.navbar-hitech { background-color: rgba(37, 42, 52, 0.85); border-bottom: 1px solid var(--hitech-border); backdrop-filter: blur(10px); padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.navbar.navbar-hitech .navbar-brand { color: var(--hitech-accent); font-weight: 700; letter-spacing: 1px; font-size: 1.25rem; }
+.navbar.navbar-hitech .navbar-brand:hover, .navbar.navbar-hitech .navbar-brand:focus { color: var(--hitech-accent-hover); text-shadow: 0 0 5px var(--hitech-accent-hover); }
+.navbar.navbar-hitech .nav-link { color: var(--hitech-text-secondary); font-weight: 500; transition: color 0.2s ease-in-out, text-shadow 0.2s ease-in-out; padding: 0.5rem 1rem; border-radius: 4px; }
+.navbar.navbar-hitech .nav-link:hover, .navbar.navbar-hitech .nav-link:focus, .navbar.navbar-hitech .nav-link.active { color: var(--hitech-accent-hover); text-shadow: 0 0 3px var(--hitech-accent-hover); }
+.navbar.navbar-hitech .nav-link.active { font-weight: 700; color: var(--hitech-accent); }
+.navbar.navbar-hitech .dropdown-menu { background-color: var(--hitech-surface); border: 1px solid var(--hitech-border); border-radius: 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); padding: 0.5rem 0; }
+.navbar.navbar-hitech .dropdown-item { color: var(--hitech-text-secondary); padding: 0.5rem 1.25rem; transition: color 0.2s ease, background-color 0.2s ease; }
+.navbar.navbar-hitech .dropdown-item:hover, .navbar.navbar-hitech .dropdown-item:focus { color: var(--hitech-accent-hover); background-color: rgba(0, 249, 160, 0.1); }
+.navbar.navbar-hitech .dropdown-divider { border-top-color: var(--hitech-border); }
+.navbar.navbar-hitech .navbar-toggler { border: 1px solid var(--hitech-border); }
+.navbar.navbar-hitech .navbar-toggler-icon { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 249, 160, 0.8)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e"); }
+
+/* Footer Styling (เหมือนเดิม) */
+.footer.footer-hitech { background-color: var(--hitech-surface); border-top: 1px solid var(--hitech-border); color: var(--hitech-text-secondary); padding: 1.5rem 0; font-size: 0.875rem; }
+
+/* Card Styling (เหมือนเดิม) */
+.card { background-color: var(--hitech-surface); border: 1px solid var(--hitech-border); border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; margin-bottom: 1.5rem; }
+.card:hover { box-shadow: 0 6px 25px rgba(0, 249, 160, 0.1); }
+.card-header { background-color: rgba(0,0,0,0.15); border-bottom: 1px solid var(--hitech-border); color: var(--hitech-accent); font-weight: 700; padding: 0.75rem 1.25rem; letter-spacing: 0.5px; border-top-left-radius: inherit; border-top-right-radius: inherit; }
+.card-body { padding: 1.5rem; }
+
+/* Table Styling (เหมือนเดิม) */
+.table { --bs-table-bg: transparent; --bs-table-striped-bg: rgba(0,0,0,0.1); --bs-table-hover-bg: rgba(0, 249, 160, 0.08); --bs-table-color: var(--hitech-text-primary); --bs-table-border-color: var(--hitech-border); margin-bottom: 0; }
+.card-body .table:last-child { margin-bottom: 0; }
+.table thead th { background-color: rgba(0,0,0,0.2); color: var(--hitech-accent); border-bottom-width: 2px; border-color: var(--hitech-border); font-weight: 600; white-space: nowrap; padding: 0.75rem 1rem; vertical-align: bottom; }
+.table tbody tr { transition: background-color 0.15s ease-in-out; }
+.table tbody tr:hover { background-color: var(--bs-table-hover-bg); }
+.table td, .table th { padding: 0.75rem 1rem; vertical-align: middle; }
+.table-sm th, .table-sm td { padding: 0.5rem 0.6rem; }
+
+/* *** Form Control Styling (Hi-Tech Update) *** */
+.form-control, .form-select, .form-control-plaintext {
+    background-color: transparent; /* ไม่มีสีพื้นหลัง */
+    color: var(--hitech-text-primary);
+    border: none; /* ลบขอบเดิมออก */
+    border-bottom: 2px solid var(--hitech-border); /* ใช้เฉพาะขอบล่าง */
+    border-radius: 0; /* ไม่มีมุมโค้ง */
+    padding: 0.6rem 0.1rem; /* ปรับ padding ให้เหมาะกับขอบล่าง */
+    transition: border-color 0.2s ease;
+    line-height: 1.5; /* ปรับ line-height */
+    height: auto; /* ปรับ height */
+}
+.form-control-plaintext { border-bottom: none; padding-left: 0; padding-right: 0; }
+.form-control:-webkit-autofill, .form-control:-webkit-autofill:hover, .form-control:-webkit-autofill:focus, .form-control:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--hitech-bg) inset !important;
+    -webkit-text-fill-color: var(--hitech-text-primary) !important;
+    border-bottom-color: var(--hitech-border) !important; /* Keep bottom border */
+}
+.form-control:focus, .form-select:focus {
+    background-color: transparent;
+    color: var(--hitech-text-primary);
+    border-bottom-color: var(--hitech-accent); /* เปลี่ยนสีขอบล่างตอน focus */
+    box-shadow: none;
+    outline: none;
+}
+.form-control::placeholder { color: var(--hitech-text-secondary); opacity: 0.5; }
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0a0b0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-position: right 0.1rem center;
+    background-size: 16px 12px;
+    padding-right: 1.5rem;
+}
+.form-select:focus {
+     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2300f9a0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+.form-label { /* Style for non-floating labels if still used */
+    font-weight: 500; color: var(--hitech-text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;
+}
+
+/* --- Floating Labels Styling --- */
+.form-floating { position: relative; }
+.form-floating > .form-control,
+.form-floating > .form-select {
+    padding-top: 1.35rem; padding-bottom: 0.35rem; height: calc(3.5rem + 2px); line-height: 1.25;
+}
+.form-floating > label {
+    position: absolute; top: 0; left: 0; height: 100%; padding: 0.85rem 0.1rem; pointer-events: none;
+    border: 1px solid transparent; transform-origin: 0 0; transition: opacity .1s ease-in-out, transform .2s ease-in-out, color .2s ease-in-out;
+    color: var(--hitech-text-secondary); opacity: 0.65; font-size: 1rem; font-weight: 400; margin-bottom: 0; border-bottom: none;
+}
+/* Style when label is floating up */
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label,
+.form-floating > .form-select:focus ~ label, /* Select needs focus state too */
+.form-floating > textarea.form-control:focus ~ label,
+.form-floating > textarea.form-control:not(:placeholder-shown) ~ label
+{
+    opacity: 1; transform: scale(.75) translateY(-0.8rem) translateX(0.15rem); /* Adjusted Y translation */
+    color: var(--hitech-accent); font-weight: 500; background-color: var(--hitech-bg);
+    padding: 0 0.3rem; height: auto; border-bottom: none;
+}
+ /* Keep select label floated if a value is selected (might need JS or rely on :focus) */
+ /* This CSS-only approach keeps it floated once focused */
+
+     /* Style for the select label *before* focus/selection if needed */
+     /* To always float it like Material Design, apply the transform below directly */
+ /* Ensure select label is also green on focus */
+.form-floating > .form-select:focus ~ label {
+     opacity: 1; transform: scale(.75) translateY(-0.8rem) translateX(0.15rem);
+     color: var(--hitech-accent); font-weight: 500; background-color: var(--hitech-bg);
+     padding: 0 0.3rem; height: auto; border-bottom: none;
+}
+.form-floating > textarea.form-control { padding-top: 1.35rem; padding-bottom: 0.35rem; min-height: calc(3.5rem + 2px); }
+/* --- End Floating Labels --- */
+
+.form-check-input { background-color: var(--hitech-surface); border-color: var(--hitech-border); }
+.form-check-input:checked { background-color: var(--hitech-accent); border-color: var(--hitech-accent); }
+.form-check-input:focus { border-color: var(--hitech-accent); box-shadow: 0 0 0 0.2rem rgba(0, 249, 160, 0.25); }
+.form-text { color: var(--hitech-text-secondary); opacity: 0.8; font-size: 0.8rem; }
+/* --- End Form Control Styling --- */
+
+
+/* Button Styling (เหมือนเดิม) */
+.btn { padding: 0.5rem 1.25rem; border-radius: 6px; font-weight: 600; letter-spacing: 0.5px; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.btn:focus { box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.3); }
+.btn-primary { background: linear-gradient(45deg, var(--hitech-accent), #00cc84); border: none; color: #000; }
+.btn-primary:hover { background: linear-gradient(45deg, var(--hitech-accent-hover), #33e0a0); box-shadow: 0 4px 15px rgba(0, 249, 160, 0.3); }
+.btn-secondary { background-color: var(--hitech-surface-hover); border-color: var(--hitech-border); color: var(--hitech-text-primary); }
+.btn-secondary:hover { background-color: var(--hitech-border); border-color: var(--hitech-text-secondary); color: var(--hitech-text-primary); }
+.btn-success { background-color: var(--hitech-success); border-color: var(--hitech-success); color: #000; }
+.btn-success:hover { background-color: #4dffaa; border-color: #4dffaa; box-shadow: 0 4px 15px rgba(0, 255, 140, 0.25); }
+.btn-warning { background-color: var(--hitech-warning); border-color: var(--hitech-warning); color: #000; }
+.btn-warning:hover { background-color: #ffee55; border-color: #ffee55; box-shadow: 0 4px 15px rgba(255, 221, 0, 0.25); }
+.btn-danger { background-color: var(--hitech-danger); border-color: var(--hitech-danger); color: #fff; }
+.btn-danger:hover { background-color: #ff6084; border-color: #ff6084; box-shadow: 0 4px 15px rgba(255, 55, 95, 0.25); }
+.btn-info { background-color: var(--hitech-accent-secondary); border-color: var(--hitech-accent-secondary); color: #fff; }
+.btn-info:hover { background-color: #ff4dd2; border-color: #ff4dd2; box-shadow: 0 4px 15px rgba(255, 0, 200, 0.25); }
+.btn-sm { padding: 0.35rem 0.8rem; font-size: 0.875rem; }
+
+/* Alert Styling (เหมือนเดิม) */
+.alert { border-width: 0; border-left-width: 5px; border-radius: 6px; padding: 1rem 1.25rem; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+.alert-success { background-color: rgba(0, 255, 140, 0.15); border-color: var(--hitech-success); color: var(--hitech-success); }
+.alert-danger { background-color: rgba(255, 55, 95, 0.15); border-color: var(--hitech-danger); color: var(--hitech-danger); }
+.alert-warning { background-color: rgba(255, 221, 0, 0.15); border-color: var(--hitech-warning); color: var(--hitech-text-primary); }
+.alert-info { background-color: rgba(0, 249, 160, 0.15); border-color: var(--hitech-accent); color: var(--hitech-accent); }
+.alert .btn-close { filter: invert(80%) sepia(10%) saturate(1000%) hue-rotate(180deg) brightness(100%) contrast(80%); }
+
+/* Pagination (เหมือนเดิม) */
+.pagination .page-link { background-color: var(--hitech-surface); border-color: var(--hitech-border); color: var(--hitech-text-secondary); margin: 0 2px; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+.pagination .page-link:hover { background-color: var(--hitech-border); color: var(--hitech-accent); border-color: var(--hitech-accent); }
+.pagination .page-item.active .page-link { background-color: var(--hitech-accent); border-color: var(--hitech-accent); color: #000; }
+.pagination .page-item.disabled .page-link { background-color: var(--hitech-surface); border-color: var(--hitech-border); color: var(--hitech-text-secondary); opacity: 0.4; }
+
+/* KPI Cards (เหมือนเดิม) */
+.kpi-card { background-color: var(--hitech-surface); border: 1px solid var(--hitech-border); border-left-width: 5px; transition: box-shadow 0.3s ease-in-out, transform 0.2s ease-in-out; border-radius: 8px; }
+.kpi-card:hover { box-shadow: 0 8px 30px rgba(0, 249, 160, 0.1); transform: translateY(-5px); }
+.kpi-card .card-title { color: var(--hitech-text-secondary); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem; }
+.kpi-card .kpi-value { color: var(--hitech-text-primary); font-size: 2.1rem; font-weight: 700; min-height: 2.5rem; line-height: 1.2; }
+.kpi-card .kpi-icon { font-size: 3.8rem; opacity: 0.08; color: var(--hitech-accent); position: absolute; right: 15px; top: 50%; transform: translateY(-55%); transition: opacity 0.3s ease; }
+.kpi-card:hover .kpi-icon { opacity: 0.15; }
+.kpi-card.border-left-primary { border-left-color: var(--hitech-accent) !important; }
+.kpi-card.border-left-success { border-left-color: var(--hitech-success) !important; }
+.kpi-card.border-left-danger { border-left-color: var(--hitech-danger) !important; }
+.kpi-card.border-left-warning { border-left-color: var(--hitech-warning) !important; }
+.kpi-card.border-left-info { border-left-color: var(--hitech-accent-secondary) !important; }
+
+/* Badge styling (เหมือนเดิม) */
+.badge { border-radius: 6px; font-weight: 600; padding: 0.45em 0.7em; font-size: 0.8em; letter-spacing: 0.3px; vertical-align: middle; }
+.text-bg-secondary, .bg-secondary { background-color: var(--hitech-border) !important; color: var(--hitech-text-secondary) !important; }
+.text-bg-success, .bg-success { background-color: var(--hitech-success) !important; color: #000 !important; }
+.text-bg-info, .bg-info { background-color: var(--hitech-accent-secondary) !important; color: #fff !important; }
+.text-bg-warning, .bg-warning { background-color: var(--hitech-warning) !important; color: #000 !important; }
+.text-bg-danger, .bg-danger { background-color: var(--hitech-danger) !important; color: #fff !important; }
+.text-bg-primary, .bg-primary { background-color: var(--hitech-accent) !important; color: #000 !important; }
+.text-bg-light, .bg-light { background-color: var(--hitech-surface-hover) !important; color: var(--hitech-text-primary) !important; }
+.text-bg-dark, .bg-dark { background-color: #000 !important; color: var(--hitech-text-primary) !important; }
+.badge.bg-success { color: #000 !important; } .badge.bg-warning { color: #000 !important; } .badge.bg-danger { color: #fff !important; } .badge.bg-info { color: #fff !important; } .badge.bg-primary { color: #000 !important; }
+
+/* Custom scrollbar (เหมือนเดิม) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--hitech-bg); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background-color: var(--hitech-border); border-radius: 5px; border: 2px solid var(--hitech-bg); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--hitech-accent); }
+
+/* Headings (เหมือนเดิม) */
+h1, h2, h3, h4, h5, h6 { color: var(--hitech-text-primary); font-weight: 700; letter-spacing: 0.5px; }
+h1 { font-size: 2.2rem; } h2 { font-size: 1.8rem; } h3 { font-size: 1.5rem; }
+hr { border-top-color: var(--hitech-border); opacity: 0.3; }
+
+/* DataTables (เหมือนเดิม) */
+div.dataTables_wrapper div.dataTables_length label, div.dataTables_wrapper div.dataTables_filter label, div.dataTables_wrapper div.dataTables_info { color: var(--hitech-text-secondary) !important; }
+div.dataTables_wrapper div.dataTables_length select, div.dataTables_wrapper div.dataTables_filter input { background-color: var(--hitech-bg) !important; border: 1px solid var(--hitech-border) !important; color: var(--hitech-text-primary) !important; border-radius: 4px; padding: 0.3rem 0.6rem; }
+div.dataTables_wrapper div.dataTables_paginate .page-link { color: var(--hitech-text-secondary) !important; background-color: var(--hitech-surface) !important; border: 1px solid var(--hitech-border) !important; }
+div.dataTables_wrapper div.dataTables_paginate .page-link:hover { color: var(--hitech-accent) !important; background-color: var(--hitech-border) !important; border: 1px solid var(--hitech-accent) !important; }
+.page-item.active .page-link { background-color: var(--hitech-accent) !important; border-color: var(--hitech-accent) !important; color: #000 !important; }
+.page-item.disabled .page-link { color: var(--hitech-text-secondary) !important; opacity: 0.4; background-color: var(--hitech-surface) !important; border: 1px solid var(--hitech-border) !important; }
+
+/* Utility classes (เหมือนเดิม) */
+.text-accent { color: var(--hitech-accent) !important; }
+.text-success-neon { color: var(--hitech-success) !important; }
+.text-danger-neon { color: var(--hitech-danger) !important; }
+.text-warning-neon { color: var(--hitech-warning) !important; }
+.glow-accent { box-shadow: 0 0 8px var(--hitech-accent), 0 0 12px var(--hitech-accent), 0 0 16px var(--hitech-accent); }

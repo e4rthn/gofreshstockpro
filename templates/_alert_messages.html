@@ -1,0 +1,16 @@
+{# templates/_alert_messages.html #}
+{# This partial template displays success or error messages passed via query parameters #}
+{% set message = request.query_params.get('message') %}
+{% if message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+{% set error = request.query_params.get('error') %}
+{% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>ข้อผิดพลาด:</strong> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}

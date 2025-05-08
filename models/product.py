@@ -1,5 +1,5 @@
 # models/product.py
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, Date # <--- เพิ่ม Date ถ้ายังไม่มี
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -15,6 +15,10 @@ class Product(Base):
     price_b2b = Column(Float, nullable=True)
     image_url = Column(String, nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+
+    # --- เพิ่มคอลัมน์ shelf_life_days ---
+    shelf_life_days = Column(Integer, nullable=True) # อายุสินค้า (วัน)
+    # ----------------------------------
 
     category = relationship("Category", back_populates="products")
     current_stocks = relationship("CurrentStock", back_populates="product", cascade="all, delete-orphan")

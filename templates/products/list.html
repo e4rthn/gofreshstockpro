@@ -5,73 +5,69 @@
 {% block content %}
 
 {# ---- ส่วนแสดง Message ---- #}
-{% set message = request.query_params.get('message') %}
-{% if message %}
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
-{% set error = request.query_params.get('error') %}
-{% if error %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        ข้อผิดพลาด: {{ error }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
+{% include '_alert_messages.html' %} {# ใช้ include แทน #}
 {# ------------------------ #}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>รายการสินค้า</h1>
-    <a href="/ui/products/add" class="btn btn-primary">เพิ่มสินค้าใหม่</a>
+    {# ใช้ Hardcoded URL สำหรับปุ่มเพิ่ม #}
+    <a href="/ui/products/add" class="btn btn-primary"><i class="bi bi-plus-circle-fill me-1"></i>เพิ่มสินค้าใหม่</a>
 </div>
 
 {# --- แสดงจำนวนข้อมูล + หน้าปัจจุบัน --- #}
 {% if total_count > 0 %}
-<p>พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p>
+<p class="text-secondary">พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p> {# ใช้ text-secondary #}
 {% endif %}
 
+<div class="card"> {# หุ้มตารางด้วย card #}
+    <div class="card-body p-0"> {# ลบ padding ของ card-body ถ้าต้องการให้ตารางชิดขอบ #}
+        {% if products %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0"> {# เพิ่ม mb-0 #}
+                <thead class="sticky-top"> {# ทำให้ header ลอยได้ #}
+                    <tr>
+                        <th>รหัส</th>
+                        <th>SKU</th>
+                        <th>ชื่อสินค้า</th>
+                        <th>หมวดหมู่</th>
+                        <th class="text-end">ราคาขาย (B2C)</th>
+                        <th class="text-center">การดำเนินการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.id }}</td>
+                        <td>{{ product.sku }}</td>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.category.name }}</td>
+                        <td class="text-end">{{ "%.2f"|format(product.price_b2c) }}</td>
+                        <td class="text-center">
+                            {# *** ใช้ Hardcoded URL สำหรับ แก้ไข/ลบ *** #}
+                            <a href="/ui/products/edit/{{ product.id }}" class="btn btn-sm btn-warning me-1"><i class="bi bi-pencil-fill"></i></a>
+                            <form method="post" action="/ui/products/delete/{{ product.id }}" style="display: inline;"
+                                  onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสินค้า \'{{ product.name }}\'?');">
+                                <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash-fill"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted p-4 text-center">ไม่พบข้อมูลสินค้า</p> {# เพิ่ม padding ถ้าไม่มีข้อมูล #}
+        {% endif %}
+    </div> {# End card-body #}
+</div> {# End card #}
 
-{% if products %}
-<table class="table table-striped table-hover">
-    <thead>
-        <tr>
-            <th>รหัส</th>
-            <th>SKU/รหัสสินค้า</th>
-            <th>ชื่อสินค้า</th>
-            <th>หมวดหมู่</th>
-            <th>ราคาขาย (B2C)</th> {# <--- แก้ไข Header ด้วยก็ได้ #}
-            <th>การดำเนินการ</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for product in products %}
-        <tr>
-            <td>{{ product.id }}</td>
-            <td>{{ product.sku }}</td>
-            <td>{{ product.name }}</td>
-            <td>{{ product.category.name }}</td>
-            {# --- แก้ไขตรงนี้ ใช้ price_b2c --- #}
-            <td>{{ "%.2f"|format(product.price_b2c) }}</td> 
-            <td>
-                <a href="/ui/products/edit/{{ product.id }}" class="btn btn-sm btn-warning">แก้ไข</a>
-                <form method="post" action="/ui/products/delete/{{ product.id }}" style="display: inline;"
-                      onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสินค้า \'{{ product.name }}\'?');">
-                    <button type="submit" class="btn btn-sm btn-danger">ลบ</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p class="text-muted">ไม่พบข้อมูลสินค้า</p>
-{% endif %}
 
 {# --- Include Pagination Template --- #}
+{% if total_pages > 1 %}
 <div class="mt-4 d-flex justify-content-center">
     {% include '_pagination.html' %}
 </div>
+{% endif %}
 {# ------------------------------- #}
 
 {% endblock %}

@@ -4,13 +4,22 @@
 
 {% block head_extra %}
 <style>
-    /* Optional: Add some specific styles for this page if needed */
-    .form-label {
-        margin-bottom: 0.25rem;
+    #current_stock_display_transfer { /* Style for readonly display */
+        background-color: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid var(--hitech-border) !important;
+        color: var(--hitech-text-secondary) !important;
+        padding-left: 0.1rem; padding-right: 0.1rem;
+        cursor: default;
+        font-style: italic;
+        text-align: center;
+        font-weight: bold;
     }
-    .form-select-sm, .form-control-sm { /* If using smaller controls */
-        font-size: 0.875rem;
+    .static-label-transfer {
+         position: absolute; top: 0.3rem; left: 0.15rem; font-size: 0.75em;
+         color: var(--hitech-text-secondary); pointer-events: none;
     }
+    .form-floating > .form-control-plaintext ~ label { opacity: 0; }
 </style>
 {% endblock %}
 
@@ -18,291 +27,204 @@
 <h1><i class="bi bi-truck me-2"></i>โอนย้ายสต็อกสินค้า</h1>
 <hr>
 
-{% if error %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>ข้อผิดพลาด:</strong> {{ error }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
-{% if message %} {# Assuming you might pass a success message via query params #}
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <strong><i class="bi bi-check-circle-fill me-2"></i>สำเร็จ:</strong> {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
+{% if error %}<div class="alert alert-danger alert-dismissible fade show" role="alert"><strong><i class="bi bi-exclamation-triangle-fill me-2"></i>ข้อผิดพลาด:</strong> {{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
+{% if message %}<div class="alert alert-success alert-dismissible fade show" role="alert"><strong><i class="bi bi-check-circle-fill me-2"></i>สำเร็จ:</strong> {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
 
 <form id="transfer-form" method="post" action="{{ request.app.url_path_for('ui_handle_transfer_form') }}">
-    <div class="row g-3 p-3 border rounded bg-light mb-4">
-        <h5 class="mb-3">เลือกสินค้าและจำนวน</h5>
-        {# --- เลือกสินค้า --- #}
-        <div class="col-md-6 mb-3">
-            <label for="category_select_transfer" class="form-label">หมวดหมู่สินค้า <span class="text-danger">*</span></label>
-            <select class="form-select form-select-sm" id="category_select_transfer" name="category_select_display" required>
-                <option value="">-- เลือกหมวดหมู่ก่อน --</option>
-                {% for category in categories %}
-                    <option value="{{ category.id }}" {% if form_data and form_data.category_id|string == category.id|string %}selected{% endif %}>
-                        {{ category.name }}
-                    </option>
-                {% endfor %}
+    <div class="row g-4 p-3 border rounded bg-dark-subtle mb-4">
+        <h5 class="mb-3 col-12">เลือกสินค้าและจำนวน</h5>
+
+        {# --- Product Selection --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="category_select_transfer" name="category_select_display" required aria-label="เลือกหมวดหมู่">
+                <option value="" {% if not (form_data and form_data.category_id) %}selected{% endif %}>-- เลือกหมวดหมู่ก่อน --</option>
+                {% for category in categories %}<option value="{{ category.id }}" {% if form_data and form_data.get('category_id')|string == category.id|string %}selected{% endif %}>{{ category.name }}</option>{% endfor %}
             </select>
+             <label for="category_select_transfer">หมวดหมู่สินค้า <span class="text-danger">*</span></label>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="product_select_transfer" class="form-label">สินค้า <span class="text-danger">*</span></label>
-            {# This select is populated by JS. The name 'product_id' for submission is on the hidden input below. #}
-            <select class="form-select form-select-sm" id="product_select_transfer" name="product_select_display_only" required disabled>
-                <option value="">-- กรุณาเลือกหมวดหมู่ก่อน --</option>
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="product_select_transfer" name="product_select_display_only" required disabled aria-label="เลือกสินค้า">
+                <option value="">-- เลือกหมวดหมู่ก่อน --</option>
             </select>
-            <input type="hidden" id="product_id" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
+             <label for="product_select_transfer">สินค้า <span class="text-danger">*</span></label>
+            <input type="hidden" id="product_id_transfer" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
         </div>
 
-        <div class="col-md-6 mb-3">
-            <label for="quantity" class="form-label">จำนวนที่โอนย้าย <span class="text-danger">*</span></label>
-            <input type="number" min="1" step="1" class="form-control form-control-sm" id="quantity" name="quantity" required
-                   value="{{ form_data.quantity if form_data else '' }}">
-            <div id="quantity_error" class="text-danger small mt-1"></div>
+        {# --- Quantity and Stock Display --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <input type="number" min="1" step="1" class="form-control" id="quantity_transfer" name="quantity" required placeholder="จำนวนที่โอนย้าย" value="{{ form_data.quantity if form_data else '' }}">
+            <label for="quantity_transfer">จำนวนที่โอนย้าย <span class="text-danger">*</span></label>
+            <div id="quantity_error_transfer" class="text-danger small mt-1"></div>
         </div>
-         <div class="col-md-6 mb-3">
-            <label for="current_stock_display" class="form-label">สต็อกคงเหลือ (ต้นทาง):</label>
-            <input type="text" class="form-control form-control-sm" id="current_stock_display" readonly disabled placeholder="เลือกสินค้าและสถานที่ต้นทาง">
-        </div>
+         <div class="col-md-6 form-floating mb-4"> {# ใช้ form-floating เพื่อ layout #}
+             <input type="text" class="form-control-plaintext" id="current_stock_display_transfer" readonly value="-">
+             <label for="current_stock_display_transfer" class="static-label-transfer">สต็อกคงเหลือ (ต้นทาง):</label>
+         </div>
     </div>
 
-    <div class="row g-3 p-3 border rounded bg-light">
-        <h5 class="mb-3">เลือกสถานที่โอนย้าย</h5>
-        {# --- เลือกสถานที่ --- #}
-        <div class="col-md-6 mb-3">
-            <label for="from_location_id" class="form-label">จากสถานที่จัดเก็บ (ต้นทาง) <span class="text-danger">*</span></label>
-            <select class="form-select form-select-sm" id="from_location_id" name="from_location_id" required>
-                <option value="">-- เลือกสถานที่ต้นทาง --</option>
-                {% for location in locations %}
-                    <option value="{{ location.id }}"
-                            {% if form_data and form_data.from_location_id|string == location.id|string %}selected{% endif %}>
-                        {{ location.name }}
-                    </option>
-                {% endfor %}
+    <div class="row g-4 p-3 border rounded bg-dark-subtle">
+        <h5 class="mb-3 col-12">เลือกสถานที่โอนย้าย</h5>
+
+        {# --- Location Selection --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="from_location_id_transfer" name="from_location_id" required aria-label="เลือกสถานที่ต้นทาง">
+                <option value="" {% if not (form_data and form_data.from_location_id) %}selected{% endif %}>-- เลือกสถานที่ต้นทาง --</option>
+                {% for location in locations %}<option value="{{ location.id }}" {% if form_data and form_data.from_location_id|string == location.id|string %}selected{% endif %}>{{ location.name }}</option>{% endfor %}
             </select>
+             <label for="from_location_id_transfer">จากสถานที่จัดเก็บ (ต้นทาง) <span class="text-danger">*</span></label>
         </div>
-         <div class="col-md-6 mb-3">
-            <label for="to_location_id" class="form-label">ไปสถานที่จัดเก็บ (ปลายทาง) <span class="text-danger">*</span></label>
-            <select class="form-select form-select-sm" id="to_location_id" name="to_location_id" required>
-                <option value="">-- เลือกสถานที่ปลายทาง --</option>
-                 {% for location in locations %}
-                    <option value="{{ location.id }}"
-                            {% if form_data and form_data.to_location_id|string == location.id|string %}selected{% endif %}>
-                        {{ location.name }}
-                    </option>
-                {% endfor %}
+         <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="to_location_id_transfer" name="to_location_id" required aria-label="เลือกสถานที่ปลายทาง">
+                <option value="" {% if not (form_data and form_data.to_location_id) %}selected{% endif %}>-- เลือกสถานที่ปลายทาง --</option>
+                 {% for location in locations %}<option value="{{ location.id }}" {% if form_data and form_data.to_location_id|string == location.id|string %}selected{% endif %}>{{ location.name }}</option>{% endfor %}
             </select>
-            <div id="location_error" class="text-danger small mt-1"></div>
+             <label for="to_location_id_transfer">ไปสถานที่จัดเก็บ (ปลายทาง) <span class="text-danger">*</span></label>
+            <div id="location_error_transfer" class="text-danger small mt-1"></div>
         </div>
 
-        <div class="col-12 mb-3">
-            <label for="notes" class="form-label">หมายเหตุ (ถ้ามี)</label>
-            <textarea class="form-control form-control-sm" id="notes" name="notes" rows="2">{{ form_data.notes if form_data else '' }}</textarea>
+        {# --- Notes --- #}
+        <div class="col-12 form-floating mb-4">
+            <textarea class="form-control" id="notes_transfer" name="notes" placeholder="หมายเหตุ (ถ้ามี)" style="height: 80px">{{ form_data.notes if form_data else '' }}</textarea>
+            <label for="notes_transfer">หมายเหตุ (ถ้ามี)</label>
         </div>
     </div>
 
     <div class="mt-4">
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-2"></i>บันทึกการโอนย้าย</button>
-        <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="btn btn-secondary"><i class="bi bi-x-lg me-2"></i>ยกเลิก</a>
+        <a href="/ui/inventory/summary/" class="btn btn-secondary"><i class="bi bi-x-lg me-2"></i>ยกเลิก</a>
     </div>
 </form>
 {% endblock %}
 
+{# --- JavaScript --- #}
 {% block scripts_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // --- Selectors for Transfer Form ---
         const categorySelect = document.getElementById('category_select_transfer');
         const productSelect = document.getElementById('product_select_transfer');
-        const productIdInput = document.getElementById('product_id'); // Hidden input for actual product_id
-        const fromLocationSelect = document.getElementById('from_location_id');
-        const toLocationSelect = document.getElementById('to_location_id');
+        const productIdInput = document.getElementById('product_id_transfer'); // Use unique ID
+        const fromLocationSelect = document.getElementById('from_location_id_transfer'); // Use unique ID
+        const toLocationSelect = document.getElementById('to_location_id_transfer');   // Use unique ID
         const transferForm = document.getElementById('transfer-form');
-        const locationErrorDiv = document.getElementById('location_error');
-        const quantityInput = document.getElementById('quantity');
-        const quantityErrorDiv = document.getElementById('quantity_error');
-        const currentStockDisplay = document.getElementById('current_stock_display');
+        const locationErrorDiv = document.getElementById('location_error_transfer'); // Use unique ID
+        const quantityInput = document.getElementById('quantity_transfer');             // Use unique ID
+        const quantityErrorDiv = document.getElementById('quantity_error_transfer');     // Use unique ID
+        const currentStockDisplay = document.getElementById('current_stock_display_transfer'); // Use unique ID
 
-        let selectedProductStock = {}; // To store stock by location for the selected product
+        // --- Function to fetch current stock (using new API endpoint) ---
+        async function fetchCurrentStockTransfer() {
+            const productId = productIdInput.value;
+            const locationId = fromLocationSelect.value; // Check stock at 'from' location
+            currentStockDisplay.value = '-'; // Reset display
 
-        async function fetchProductDetailsAndStock(productId) {
-            if (!productId) {
-                selectedProductStock = {};
-                updateCurrentStockDisplay();
-                return;
-            }
-            try {
-                // Fetch full product details to get stock info if not directly available
-                // Or, ideally, an API that returns current stock for a product at all locations
-                // For now, let's assume an API endpoint /api/products/{product_id}/current-stock
-                // This is a placeholder, you'll need to implement this API
-                // It should return something like: { "stocks": [ {"location_id": 1, "quantity": 10}, ... ] }
-                // For a simpler approach without a new API, this part might be harder to implement accurately.
-                // Let's simulate or fetch if possible.
-                // const response = await fetch(`/api/products/${productId}/details`); // Assuming this gives enough info or stock
-                // For now, we can't easily get stock for all locations from existing basic product info.
-                // This functionality (displaying current stock at 'from_location') requires more backend support.
-                // So, we'll just clear it for now or leave it for a future enhancement.
-                selectedProductStock = {}; // Reset
-                updateCurrentStockDisplay(); // Clear or update based on new product
-            } catch (error) {
-                console.error('Error fetching product details/stock:', error);
-                selectedProductStock = {};
-                updateCurrentStockDisplay();
-            }
-        }
-
-        function updateCurrentStockDisplay() {
-            const selectedFromLocationId = fromLocationSelect.value;
-            if (productIdInput.value && selectedFromLocationId) {
-                // This part needs an API to get current stock of product_id at selectedFromLocationId
-                // Example: /api/inventory/summary?product_id=X&location_id=Y (if your API supports this)
-                // For now, let's just show a placeholder message
-                currentStockDisplay.value = "N/A (API needed)";
-
-                // Placeholder for actual API call:
-                // fetch(`/api/inventory/summary-item?product_id=${productIdInput.value}&location_id=${selectedFromLocationId}`)
-                // .then(response => response.json())
-                // .then(data => {
-                //     if(data && typeof data.quantity !== 'undefined') {
-                //         currentStockDisplay.value = data.quantity;
-                //     } else {
-                //         currentStockDisplay.value = '0 (or not found)';
-                //     }
-                // })
-                // .catch(err => {
-                //     console.error("Error fetching current stock for display:", err);
-                //     currentStockDisplay.value = "Error";
-                // });
-
-            } else {
-                currentStockDisplay.value = "เลือกสินค้าและสถานที่ต้นทาง";
-            }
-        }
-
-
-        if (categorySelect && productSelect && productIdInput) {
-            categorySelect.addEventListener('change', async function() {
-                const categoryId = this.value;
-                productSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-                productSelect.disabled = true;
-                productIdInput.value = ''; // Clear hidden product ID
-                selectedProductStock = {}; // Clear stock info
-                updateCurrentStockDisplay();
-
-
-                if (categoryId) {
-                    try {
-                        const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        const products = await response.json();
-                        productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
-                        if (products.length > 0) {
-                            products.forEach(product => {
-                                const option = document.createElement('option');
-                                option.value = product.id;
-                                // Display SKU or Barcode along with name if available
-                                let displayText = product.name;
-                                if (product.sku) displayText += ` (SKU: ${product.sku})`;
-                                if (product.barcode && product.barcode !== product.sku) displayText += ` [BC: ${product.barcode}]`;
-                                option.textContent = displayText;
-                                productSelect.appendChild(option);
-                            });
-                            productSelect.disabled = false;
-                        } else {
-                            productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>';
-                        }
-                    } catch (error) {
-                        console.error('Error fetching products for transfer form:', error);
-                        productSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>';
+            if (productId && locationId) {
+                currentStockDisplay.value = 'กำลังโหลด...';
+                try {
+                    const response = await fetch(`/api/inventory/stock-level/${productId}/${locationId}`); // Call the new API
+                    if (response.ok) {
+                        const stockData = await response.json();
+                        currentStockDisplay.value = stockData.quantity;
+                    } else if (response.status === 404) {
+                        currentStockDisplay.value = '0'; // Not found means 0 stock
+                    } else {
+                        console.error('Error fetching stock level:', response.status);
+                        currentStockDisplay.value = 'ผิดพลาด';
                     }
-                } else {
-                    productSelect.innerHTML = '<option value="">-- กรุณาเลือกหมวดหมู่ก่อน --</option>';
+                } catch (error) {
+                    console.error('Error fetching stock level:', error);
+                    currentStockDisplay.value = 'ผิดพลาด';
                 }
-            });
-
-            productSelect.addEventListener('change', function() {
-                productIdInput.value = this.value; // Set the actual product_id to the hidden input
-                // fetchProductDetailsAndStock(this.value); // Fetch stock for the newly selected product
-                updateCurrentStockDisplay(); // Update based on selected product and from_location
-            });
-        }
-
-        if (fromLocationSelect) {
-            fromLocationSelect.addEventListener('change', function() {
-                validateLocations();
-                updateCurrentStockDisplay(); // Update stock display when from_location changes
-            });
-        }
-        if (toLocationSelect) {
-            toLocationSelect.addEventListener('change', validateLocations);
-        }
-
-        function validateLocations() {
-            if (locationErrorDiv) locationErrorDiv.textContent = ''; // Clear previous error
-            if (fromLocationSelect.value && toLocationSelect.value && fromLocationSelect.value === toLocationSelect.value) {
-                if (locationErrorDiv) locationErrorDiv.textContent = "สถานที่ต้นทางและปลายทางต้องแตกต่างกัน";
-                toLocationSelect.setCustomValidity("สถานที่ต้นทางและปลายทางต้องแตกต่างกัน"); // For browser validation tooltip
-                return false;
             } else {
-                if (toLocationSelect) toLocationSelect.setCustomValidity(""); // Clear browser validation
-                return true;
+                 currentStockDisplay.value = 'เลือกสินค้าและสถานที่ต้นทาง';
             }
         }
-        
+
+        // --- Function to populate products ---
+        async function fetchAndPopulateProductsTransfer(categoryId, selectedProductId = null) {
+            productSelect.innerHTML = '<option value="">กำลังโหลด...</option>'; productSelect.disabled = true;
+            productIdInput.value = selectedProductId || '';
+            fetchCurrentStockTransfer(); // Fetch stock when category changes
+
+            if (!categoryId) { productSelect.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>'; return; }
+            try {
+                const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const products = await response.json();
+                productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
+                if (products.length > 0) {
+                    products.forEach(product => {
+                        const option = document.createElement('option'); option.value = product.id;
+                        let displayText = product.name; if (product.sku) displayText += ` (SKU: ${product.sku})`; if (product.barcode && product.barcode !== product.sku) displayText += ` [BC: ${product.barcode}]`;
+                        option.textContent = displayText;
+                        if (selectedProductId && parseInt(product.id) === parseInt(selectedProductId)) { option.selected = true; }
+                        productSelect.appendChild(option);
+                    });
+                    productSelect.disabled = false;
+                    if (selectedProductId) productSelect.dispatchEvent(new Event('change')); // Trigger change if pre-selected
+                } else { productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>'; }
+            } catch (error) { console.error('Error fetching products:', error); productSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาด --</option>'; }
+        }
+
+        // --- Function to validate locations ---
+        function validateLocationsTransfer() {
+            if (locationErrorDiv) locationErrorDiv.textContent = '';
+            const fromVal = fromLocationSelect.value;
+            const toVal = toLocationSelect.value;
+            if (fromVal && toVal && fromVal === toVal) {
+                if (locationErrorDiv) locationErrorDiv.textContent = "สถานที่ต้นทางและปลายทางต้องแตกต่างกัน";
+                toLocationSelect.setCustomValidity("สถานที่ต้นทางและปลายทางต้องแตกต่างกัน"); return false;
+            } else { if (toLocationSelect) toLocationSelect.setCustomValidity(""); return true; }
+        }
+
+        // --- Event Listeners ---
+        if (categorySelect && productSelect && productIdInput && fromLocationSelect && currentStockDisplay) {
+            categorySelect.addEventListener('change', function() { fetchAndPopulateProductsTransfer(this.value); });
+            productSelect.addEventListener('change', function() { productIdInput.value = this.value; fetchCurrentStockTransfer(); });
+            fromLocationSelect.addEventListener('change', function() { validateLocationsTransfer(); fetchCurrentStockTransfer(); }); // Also fetch stock on location change
+            if (toLocationSelect) toLocationSelect.addEventListener('change', validateLocationsTransfer);
+        }
+
         if (quantityInput && quantityErrorDiv) {
             quantityInput.addEventListener('input', function() {
-                quantityErrorDiv.textContent = ''; // Clear error on input
-                if (parseInt(this.value) < 1 && this.value !== '') {
-                    quantityErrorDiv.textContent = 'จำนวนต้องมากกว่าหรือเท่ากับ 1';
-                }
+                quantityErrorDiv.textContent = ''; if ((!this.value || parseInt(this.value) < 1) && this.value !== '') { quantityErrorDiv.textContent = 'จำนวนต้องมากกว่าหรือเท่ากับ 1'; }
             });
         }
-
 
         if (transferForm) {
             transferForm.addEventListener('submit', function(event) {
-                let isValid = true;
-                if (!validateLocations()) {
-                    isValid = false;
-                }
-                if (!productIdInput.value) {
-                    alert("กรุณาเลือกสินค้าที่ต้องการโอนย้าย");
-                    isValid = false;
-                }
-                if (quantityInput && parseInt(quantityInput.value) < 1) {
-                    if (quantityErrorDiv) quantityErrorDiv.textContent = 'จำนวนต้องมากกว่าหรือเท่ากับ 1';
-                    isValid = false;
-                }
-
-                if (!isValid) {
-                    event.preventDefault(); // Stop form submission if not valid
-                }
+                let isValid = true; if (!validateLocationsTransfer()) isValid = false;
+                if (!productIdInput.value) { alert("กรุณาเลือกสินค้าที่ต้องการโอนย้าย"); isValid = false; }
+                if (quantityInput && (!quantityInput.value || parseInt(quantityInput.value) < 1)) { if (quantityErrorDiv) quantityErrorDiv.textContent = 'จำนวนต้องมากกว่าหรือเท่ากับ 1'; isValid = false; }
+                if (!isValid) { event.preventDefault(); }
             });
         }
 
-        // Initial population if form_data exists (e.g., on error return)
-        const initialProductId = "{{ form_data.product_id if form_data else '' }}";
-        const initialCategoryId = "{{ form_data.category_id if form_data else '' }}"; // Assuming you pass category_id with form_data
-
+        // --- Initial Load Logic (if needed for error re-render) ---
+        const initialProductId = productIdInput.value;
+        const initialCategoryId = "{{ form_data.category_id if form_data else '' }}"; // Need category_id if product is preselected
+        const initialFromLocationId = fromLocationSelect.value;
         if (initialCategoryId && categorySelect) {
-            categorySelect.value = initialCategoryId;
-            // Trigger change to load products for this category
-            categorySelect.dispatchEvent(new Event('change'));
-            // Then, try to select the product after products are loaded
-            // This requires a small delay or a more robust way to handle async loading
-            setTimeout(() => {
-                if (initialProductId && productSelect) {
-                    productSelect.value = initialProductId;
-                    productIdInput.value = initialProductId; // Ensure hidden input is also set
-                    // fetchProductDetailsAndStock(initialProductId);
-                     updateCurrentStockDisplay();
-                }
-            }, 500); // Adjust delay as needed, or use a Promise/await structure
+             categorySelect.value = initialCategoryId;
+             // Use timeout to ensure category is set before dispatching change
+             setTimeout(() => { categorySelect.dispatchEvent(new Event('change')); }, 0);
+             // Need another timeout to select product *after* fetch completes
+             if (initialProductId) {
+                 setTimeout(() => {
+                     if (productSelect.options.length > 1) { // Check if products loaded
+                        productSelect.value = initialProductId;
+                        // Fetch initial stock after product and location are set
+                        if(initialFromLocationId) fetchCurrentStockTransfer();
+                     }
+                 }, 600); // Adjust delay as needed
+             }
+        } else {
+             // Fetch initial stock if product and location are already selected (e.g. browser back)
+             if (initialProductId && initialFromLocationId) {
+                 fetchCurrentStockTransfer();
+             }
         }
-         // Trigger initial validation for locations if values are pre-filled
-        validateLocations();
-        updateCurrentStockDisplay(); // Initial call to set display if possible
+        validateLocationsTransfer(); // Initial validation
 
     });
 </script>

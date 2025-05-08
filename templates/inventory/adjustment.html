@@ -2,125 +2,195 @@
 
 {% block title %}ปรับปรุงสต็อก - GoFresh StockPro{% endblock %}
 
+{% block head_extra %}
+<style>
+    #current_stock_display_adj { /* Style for readonly display */
+        background-color: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid var(--hitech-border) !important;
+        color: var(--hitech-text-secondary) !important;
+        padding-left: 0.1rem; padding-right: 0.1rem;
+        cursor: default;
+        font-style: italic;
+        text-align: center; /* Center align */
+        font-weight: bold;
+    }
+    .static-label-adj {
+         position: absolute; top: 0.3rem; left: 0.15rem; font-size: 0.75em;
+         color: var(--hitech-text-secondary); pointer-events: none;
+    }
+     /* Specific padding adjustment if needed for this form */
+     .form-floating > .form-control-plaintext ~ label { opacity: 0; }
+</style>
+{% endblock %}
+
+
 {% block content %}
 <h1>บันทึกการปรับปรุงสต็อก</h1>
 <hr>
 
-{% if error %}
-    <div class="alert alert-danger" role="alert">
-        ข้อผิดพลาด: {{ error }}
-    </div>
-{% endif %}
+{% if error %}<div class="alert alert-danger" role="alert">ข้อผิดพลาด: {{ error }}</div>{% endif %}
 
-<form method="post" action="/ui/inventory/adjust/">
-    <div class="row g-3">
-        {# --- Cascading Dropdown --- #}
-        <div class="col-md-6 mb-3">
-            <label for="category_select" class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
-            <select class="form-select" id="category_select" name="category_select" required>
-                <option value="">-- เลือกหมวดหมู่ก่อน --</option>
-                {% for category in categories %}
-                    <option value="{{ category.id }}">{{ category.name }}</option>
-                    {# อาจจะเพิ่ม logic selected ถ้ากลับมาจาก error #}
-                {% endfor %}
+<form method="post" action="{{ request.app.url_path_for('ui_handle_adjustment_form') }}">
+    <div class="row g-4">
+        {# --- Product Selection --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="category_select_adj" name="category_select_display" required aria-label="เลือกหมวดหมู่">
+                 <option value="" {% if not (form_data and form_data.get('category_id')) %}selected{% endif %}>-- เลือกหมวดหมู่ก่อน --</option>
+                 {% for category in categories %}<option value="{{ category.id }}" {% if form_data and form_data.get('category_id')|string == category.id|string %}selected{% endif %}>{{ category.name }}</option>{% endfor %}
             </select>
+             <label for="category_select_adj">หมวดหมู่ <span class="text-danger">*</span></label>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="product_select" class="form-label">สินค้า <span class="text-danger">*</span></label>
-            <select class="form-select" id="product_select" name="product_select_display" required disabled>
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="product_select_adj" name="product_select_display_only" required disabled aria-label="เลือกสินค้า">
                 <option value="">-- เลือกหมวดหมู่ก่อน --</option>
             </select>
-            <input type="hidden" id="product_id" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
+             <label for="product_select_adj">สินค้า <span class="text-danger">*</span></label>
+            <input type="hidden" id="product_id_adj" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
         </div>
-        {# --------------------------- #}
 
-        <div class="col-md-6 mb-3">
-            <label for="location_id" class="form-label">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
-            <select class="form-select" id="location_id" name="location_id" required>
-                <option value="">-- เลือกสถานที่ --</option>
-                {% for location in locations %}
-                    <option value="{{ location.id }}"
-                            {% if form_data and form_data.location_id|int == location.id %}selected{% endif %}>
-                        {{ location.name }}
-                    </option>
-                {% endfor %}
+        {# --- Location and Current Stock Display --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="location_id_adj" name="location_id" required aria-label="เลือกสถานที่จัดเก็บ">
+                <option value="" {% if not (form_data and form_data.location_id) %}selected{% endif %}>-- เลือกสถานที่ --</option>
+                {% for location in locations %}<option value="{{ location.id }}" {% if form_data and form_data.location_id|int == location.id %}selected{% endif %}>{{ location.name }}</option>{% endfor %}
             </select>
+            <label for="location_id_adj">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="quantity_change" class="form-label">จำนวนที่เปลี่ยนแปลง <span class="text-danger">*</span></label>
-            <input type="number" step="1" class="form-control" id="quantity_change" name="quantity_change" required
-                   value="{{ form_data.quantity_change if form_data else '' }}" placeholder="ใส่ค่าบวกเพื่อเพิ่ม, ค่าลบเพื่อลด">
-            <div class="form-text">ใส่ค่าบวกเพื่อเพิ่มสต็อก, ค่าลบเพื่อลดสต็อก (ห้ามใส่ 0)</div> {# แก้ไข help text #}
+         <div class="col-md-6 form-floating mb-4"> {# ใช้ form-floating เพื่อ layout #}
+             <input type="text" class="form-control-plaintext" id="current_stock_display_adj" readonly value="-">
+             <label for="current_stock_display_adj" class="static-label-adj">สต็อกปัจจุบัน ณ สถานที่นี้:</label>
+         </div>
+
+         {# --- Quantity Change --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <input type="number" step="1" class="form-control" id="quantity_change" name="quantity_change" required placeholder="จำนวนที่เปลี่ยนแปลง (+/-)" value="{{ form_data.quantity_change if form_data else '' }}">
+            <label for="quantity_change">จำนวนที่เปลี่ยนแปลง <span class="text-danger">*</span></label>
+             <div class="form-text position-absolute bottom-0 start-0 ms-2 mb-n4">ใส่ค่าบวกเพื่อเพิ่ม, ค่าลบเพื่อลด (ห้ามใส่ 0)</div>
         </div>
 
-        {# --- Reason Dropdown --- #}
-        <div class="col-md-6 mb-3">
-            <label for="reason" class="form-label">เหตุผล</label>
-            <select class="form-select" id="reason" name="reason">
-                <option value="">-- เลือกเหตุผล (ไม่บังคับ) --</option> {# แก้ไขข้อความ #}
-                {% for r in reasons %}
-                    <option value="{{ r }}"
-                            {% if form_data and form_data.reason == r %}selected{% endif %}>
-                        {{ r }}
-                    </option>
-                {% endfor %}
+        {# --- Reason --- #}
+        <div class="col-md-6 form-floating mb-4">
+            <select class="form-select" id="reason" name="reason" aria-label="เลือกเหตุผล">
+                <option value="" {% if not (form_data and form_data.reason) %}selected{% endif %}>-- เลือกเหตุผล (ไม่บังคับ) --</option>
+                {% for r in reasons %}<option value="{{ r }}" {% if form_data and form_data.reason == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
             </select>
+             <label for="reason">เหตุผล</label>
         </div>
-        {# --------------------- #}
 
-         <div class="col-12 mb-3"> {# อาจจะปรับ layout ถ้าต้องการ #}
-            <label for="notes" class="form-label">หมายเหตุ</label>
-            <textarea class="form-control" id="notes" name="notes" rows="3">{{ form_data.notes if form_data else '' }}</textarea>
+        {# --- Notes --- #}
+         <div class="col-12 form-floating mb-4">
+            <textarea class="form-control" id="notes" name="notes" placeholder="หมายเหตุ" style="height: 80px">{{ form_data.notes if form_data else '' }}</textarea>
+            <label for="notes">หมายเหตุ</label>
         </div>
     </div>
 
-    <button type="submit" class="btn btn-warning">บันทึกปรับปรุง</button>
-    <a href="/ui/inventory/summary/" class="btn btn-secondary">ยกเลิก</a>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-warning">บันทึกปรับปรุง</button>
+        <a href="/ui/inventory/summary/" class="btn btn-secondary">ยกเลิก</a>
+    </div>
 </form>
 {% endblock %}
 
-{# --- ใช้ JavaScript เดียวกันกับหน้า Stock In --- #}
+{# --- JavaScript สำหรับ Cascading Dropdown และ ดึงสต็อกปัจจุบัน --- #}
 {% block scripts_extra %}
 <script>
-    const categorySelect = document.getElementById('category_select');
-    const productSelect = document.getElementById('product_select');
-    const productIdInput = document.getElementById('product_id');
+    const categorySelectAdj = document.getElementById('category_select_adj');
+    const productSelectAdj = document.getElementById('product_select_adj');
+    const productIdInputAdj = document.getElementById('product_id_adj');
+    const locationSelectAdj = document.getElementById('location_id_adj');
+    const currentStockDisplayAdj = document.getElementById('current_stock_display_adj');
 
-    categorySelect.addEventListener('change', async function() {
-        const categoryId = this.value;
-        productSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-        productSelect.disabled = true;
-        productIdInput.value = '';
+    // Function to fetch current stock
+    async function fetchCurrentStockAdj() {
+        const productId = productIdInputAdj.value;
+        const locationId = locationSelectAdj.value;
+        currentStockDisplayAdj.value = '-'; // Reset display
 
-        if (categoryId) {
+        if (productId && locationId) {
+            currentStockDisplayAdj.value = 'กำลังโหลด...';
             try {
-                const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
-                const products = await response.json();
-
-                productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
-                if (products.length > 0) {
-                    products.forEach(product => {
-                        const option = document.createElement('option');
-                        option.value = product.id;
-                        option.textContent = `${product.name} (SKU: ${product.sku})`;
-                        productSelect.appendChild(option);
-                    });
-                     productSelect.disabled = false;
+                // *** ใช้ API Endpoint ที่เราสร้างขึ้น ***
+                const response = await fetch(`/api/inventory/stock-level/${productId}/${locationId}`);
+                if (response.ok) {
+                    const stockData = await response.json();
+                    currentStockDisplayAdj.value = stockData.quantity;
+                } else if (response.status === 404) {
+                    currentStockDisplayAdj.value = '0'; // Not found means 0 stock
                 } else {
-                     productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>';
+                    console.error('Error fetching stock level:', response.status);
+                    currentStockDisplayAdj.value = 'ผิดพลาด';
                 }
             } catch (error) {
-                console.error('Error fetching products:', error);
-                productSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาดในการโหลด --</option>';
+                console.error('Error fetching stock level:', error);
+                currentStockDisplayAdj.value = 'ผิดพลาด';
             }
         } else {
-             productSelect.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>';
+             currentStockDisplayAdj.value = '-'; // If product or location not selected
         }
-    });
+    }
 
-    productSelect.addEventListener('change', function() {
-         productIdInput.value = this.value;
-    });
+    // Function to populate products (เหมือนเดิม แต่เรียก fetchCurrentStockAdj)
+    async function fetchAndPopulateProductsAdj(categoryId, selectedProductId = null) {
+        productSelectAdj.innerHTML = '<option value="">กำลังโหลด...</option>';
+        productSelectAdj.disabled = true;
+        productIdInputAdj.value = selectedProductId || '';
+        fetchCurrentStockAdj(); // Fetch stock when category changes (product will be cleared)
+
+        if (!categoryId) {
+            productSelectAdj.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>';
+            return;
+        }
+        try {
+            const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const products = await response.json();
+            productSelectAdj.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
+            if (products.length > 0) {
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.name} (SKU: ${product.sku})`;
+                    if (selectedProductId && parseInt(product.id) === parseInt(selectedProductId)) {
+                        option.selected = true;
+                    }
+                    productSelectAdj.appendChild(option);
+                });
+                 productSelectAdj.disabled = false;
+                 if (selectedProductId) productSelectAdj.dispatchEvent(new Event('change')); // Trigger change if pre-selected
+            } else {
+                 productSelectAdj.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>';
+            }
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            productSelectAdj.innerHTML = '<option value="">-- เกิดข้อผิดพลาดในการโหลด --</option>';
+        }
+    }
+
+    // Event Listeners
+    if(categorySelectAdj && productSelectAdj && productIdInputAdj && locationSelectAdj && currentStockDisplayAdj){
+        categorySelectAdj.addEventListener('change', function() {
+            fetchAndPopulateProductsAdj(this.value); // Populate products
+        });
+        productSelectAdj.addEventListener('change', function() {
+             productIdInputAdj.value = this.value;
+             fetchCurrentStockAdj(); // Fetch stock when product changes
+        });
+        locationSelectAdj.addEventListener('change', fetchCurrentStockAdj); // Fetch stock when location changes
+
+         // Initial load if form_data exists
+        const initialProductIdAdj = productIdInputAdj.value;
+        const initialCategoryIdAdj = categorySelectAdj.value; // Assuming category select might be pre-filled too
+        if(initialCategoryIdAdj && initialProductIdAdj){
+            fetchAndPopulateProductsAdj(initialCategoryIdAdj, initialProductIdAdj);
+            // Stock will be fetched by the event listener trigger
+        } else if (initialCategoryIdAdj) {
+             fetchAndPopulateProductsAdj(initialCategoryIdAdj);
+        }
+         // Fetch initial stock if product and location are pre-selected
+         if (productIdInputAdj.value && locationSelectAdj.value) {
+             fetchCurrentStockAdj();
+         }
+    }
 </script>
 {% endblock %}

@@ -3,37 +3,34 @@
 {% block title %}แก้ไขสถานที่จัดเก็บ - {{ location.name }}{% endblock %}
 
 {% block content %}
-<h1>แก้ไขสถานที่จัดเก็บ: {{ location.name }}</h1>
+<h1>แก้ไขสถานที่จัดเก็บ: <span class="text-accent">{{ location.name }}</span></h1>
 <hr>
 
-{% if error %}
-    <div class="alert alert-danger" role="alert">
-        ข้อผิดพลาด: {{ error }}
-    </div>
-{% endif %}
+{% if error %}<div class="alert alert-danger" role="alert">ข้อผิดพลาด: {{ error }}</div>{% endif %}
 
-<form method="post" action="/ui/locations/edit/{{ location.id }}">
-    <div class="mb-3">
-        <label for="name" class="form-label">ชื่อสถานที่ใหม่ <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="name" name="name" required
-               value="{{ form_data.name if form_data else location.name }}">
+{# ใช้ action ที่ถูกต้องตามโครงสร้าง router ใหม่ #}
+<form method="post" action="{{ request.app.url_path_for('ui_handle_edit_location_form', location_id=location.id) }}">
+    <div class="row g-4">
+        <div class="col-md-6 form-floating mb-4">
+            <input type="text" class="form-control" id="name" name="name" required placeholder="ชื่อสถานที่ใหม่" value="{{ form_data.name if form_data else location.name }}">
+            <label for="name">ชื่อสถานที่ใหม่ <span class="text-danger">*</span></label>
+        </div>
+        <div class="col-md-6 form-floating mb-4">
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="discount_percent" name="discount_percent" placeholder="เปอร์เซ็นต์ส่วนลด (สำหรับ RTC)" value="{{ form_data.discount_percent if form_data else (location.discount_percent | default('', true)) }}">
+            <label for="discount_percent">เปอร์เซ็นต์ส่วนลด (สำหรับ RTC)</label>
+             <div class="form-text position-absolute bottom-0 start-0 ms-2 mb-n4">เช่น 25 หรือ 50 (ถ้าไม่ใช่ ให้เว้นว่าง)</div>
+        </div>
+        <div class="col-12 form-floating mb-4">
+            <textarea class="form-control" id="description" name="description" placeholder="รายละเอียด" style="height: 80px">{{ form_data.description if form_data else (location.description if location.description else '') }}</textarea>
+            <label for="description">รายละเอียด</label>
+        </div>
     </div>
-    <div class="mb-3">
-        <label for="description" class="form-label">รายละเอียด</label>
-        <textarea class="form-control" id="description" name="description" rows="3">{{ form_data.description if form_data else (location.description if location.description else '') }}</textarea>
-    </div>
-    {# --- เพิ่ม/แก้ไข Input Field สำหรับ Discount Percent --- #}
-    <div class="mb-3">
-        <label for="discount_percent" class="form-label">เปอร์เซ็นต์ส่วนลด (สำหรับสถานที่ RTC)</label>
-        <input type="number" step="0.01" min="0" max="100" class="form-control"
-               id="discount_percent" name="discount_percent"
-               placeholder="เช่น 25 หรือ 50 (ถ้าไม่ใช่สถานที่ RTC ให้เว้นว่าง)"
-               value="{{ form_data.discount_percent if form_data else (location.discount_percent | default('', true)) }}">
-        <div class="form-text">กรอกเฉพาะกรณีเป็นสถานที่สำหรับสินค้า RTC (เช่น 0-100)</div>
-    </div>
-    {# ------------------------------------------------- #}
 
-    <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
-    <a href="/ui/locations/" class="btn btn-secondary">ยกเลิก</a>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+        {# ใช้ Hardcoded URL หรือ url_path_for ถ้ามันทำงานได้แล้ว #}
+        <a href="/ui/locations/" class="btn btn-secondary">ยกเลิก</a>
+        {# <a href="{{ request.app.url_path_for('ui_read_all_locations') }}" class="btn btn-secondary">ยกเลิก</a> #}
+    </div>
 </form>
 {% endblock %}

@@ -6,31 +6,33 @@
 <h1>สร้างรอบนับสต็อกใหม่</h1>
 <hr>
 
-{% if error %}
-    <div class="alert alert-danger" role="alert">
-        ข้อผิดพลาด: {{ error }}
-    </div>
-{% endif %}
+{% if error %}<div class="alert alert-danger" role="alert">ข้อผิดพลาด: {{ error }}</div>{% endif %}
 
-<form method="post" action="/ui/stock-counts/sessions/new">
-    <div class="mb-3">
-        <label for="location_id" class="form-label">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
-        <select class="form-select" id="location_id" name="location_id" required>
-            <option value="">-- เลือกสถานที่ที่จะนับ --</option>
-            {% for location in locations %}
-                <option value="{{ location.id }}"
-                        {% if form_data and form_data.location_id|int == location.id %}selected{% endif %}>
-                    {{ location.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-     <div class="mb-3">
-        <label for="notes" class="form-label">หมายเหตุ</label>
-        <textarea class="form-control" id="notes" name="notes" rows="3">{{ form_data.notes if form_data else '' }}</textarea>
+{# ใช้ action ที่ถูกต้องตามโครงสร้าง router ใหม่ #}
+<form method="post" action="{{ request.app.url_path_for('ui_handle_create_session_form') }}">
+     <div class="row g-4">
+        <div class="col-md-6 form-floating mb-4"> {# ใช้ col-md-6 ถ้าต้องการ #}
+            <select class="form-select" id="location_id" name="location_id" required aria-label="เลือกสถานที่ที่จะนับ">
+                <option value="" {% if not (form_data and form_data.location_id) %}selected{% endif %}>-- เลือกสถานที่ที่จะนับ --</option>
+                {% for location in locations %}
+                    <option value="{{ location.id }}" {% if form_data and form_data.location_id|int == location.id %}selected{% endif %}>
+                        {{ location.name }}
+                    </option>
+                {% endfor %}
+            </select>
+             <label for="location_id">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
+        </div>
+         <div class="col-12 form-floating mb-4">
+            <textarea class="form-control" id="notes" name="notes" placeholder="หมายเหตุ" style="height: 80px">{{ form_data.notes if form_data else '' }}</textarea>
+            <label for="notes">หมายเหตุ</label>
+        </div>
     </div>
 
-    <button type="submit" class="btn btn-primary">สร้างรอบนับ</button>
-    <a href="/ui/stock-counts/sessions/" class="btn btn-secondary">ยกเลิก</a>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">สร้างรอบนับ</button>
+         {# ใช้ Hardcoded URL หรือ url_path_for ถ้ามันทำงานได้แล้ว #}
+        <a href="/ui/stock-counts/sessions/" class="btn btn-secondary">ยกเลิก</a>
+        {# <a href="{{ request.app.url_path_for('ui_list_stock_count_sessions') }}" class="btn btn-secondary">ยกเลิก</a> #}
+    </div>
 </form>
 {% endblock %}

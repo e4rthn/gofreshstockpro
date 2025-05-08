@@ -3,45 +3,25 @@
 {% block title %}รับสินค้าเข้า - GoFresh StockPro{% endblock %}
 
 {% block head_extra %}
-{# Add any specific styles if needed #}
-<style>
-    .form-label { margin-bottom: 0.25rem; }
-    .form-select-sm, .form-control-sm { font-size: 0.875rem; }
-</style>
+<style> .hidden { display: none !important; } </style> {# ใช้ !important เพื่อ override #}
 {% endblock %}
 
 {% block content %}
 <h1><i class="bi bi-box-arrow-in-down me-2"></i>บันทึกการรับสินค้าเข้า</h1>
 <hr>
 
-{% if error %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>ข้อผิดพลาด:</strong> {{ error }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
-{% if message %} {# Assuming success message might be passed via query params #}
-     <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <strong><i class="bi bi-check-circle-fill me-2"></i>สำเร็จ:</strong> {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
+{% if error %}<div class="alert alert-danger alert-dismissible fade show" role="alert"><strong><i class="bi bi-exclamation-triangle-fill me-2"></i>ข้อผิดพลาด:</strong> {{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
+{% if message %}<div class="alert alert-success alert-dismissible fade show" role="alert"><strong><i class="bi bi-check-circle-fill me-2"></i>สำเร็จ:</strong> {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
 
-{# Use url_for to generate the form action URL, ensure the route name is correct #}
 <form method="post" action="{{ request.app.url_path_for('ui_handle_stock_in_form') }}">
-    <div class="row g-3 p-3 border rounded bg-light">
-         {# --- Cascading Dropdown for Product Selection --- #}
+    <div class="row g-3 p-3 border rounded bg-light-subtle"> {# ใช้ bg-light-subtle ใน dark mode จะดูดีกว่า #}
+         {# --- Product Selection --- #}
          <div class="col-md-6 mb-3">
             <label for="category_select" class="form-label">หมวดหมู่สินค้า <span class="text-danger">*</span></label>
-            {# Use a different name for the display select to avoid confusion with hidden category_id if needed #}
             <select class="form-select form-select-sm" id="category_select" name="category_select_display" required>
                 <option value="">-- เลือกหมวดหมู่ก่อน --</option>
                 {% for category in categories %}
-                    {# Pre-select category if coming back from an error and form_data contains category_id #}
-                    {# Note: We need category_id in form_data for this to work reliably after error #}
-                    <option value="{{ category.id }}"
-                            {% if form_data and form_data.get('category_id')|string == category.id|string %}selected{% endif %}>
-                            {# Example: form_data might need category_id if product_id is known #}
+                    <option value="{{ category.id }}" {% if form_data and form_data.get('category_id')|string == category.id|string %}selected{% endif %}>
                         {{ category.name }}
                     </option>
                 {% endfor %}
@@ -49,50 +29,47 @@
         </div>
         <div class="col-md-6 mb-3">
             <label for="product_select" class="form-label">สินค้า <span class="text-danger">*</span></label>
-            {# This select is populated by JS. The actual product_id is submitted via the hidden input. #}
             <select class="form-select form-select-sm" id="product_select" name="product_select_display_only" required disabled>
                 <option value="">-- กรุณาเลือกหมวดหมู่ก่อน --</option>
             </select>
-            {# Hidden input that will hold the actual product_id for submission #}
             <input type="hidden" id="product_id" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
+            <input type="hidden" id="product_shelf_life" value=""> {# เก็บ shelf life ไว้ใช้ใน JS #}
         </div>
-        {# ------------------------------------------------- #}
-
+         {# --- Location, Quantity, Cost --- #}
         <div class="col-md-6 mb-3">
             <label for="location_id" class="form-label">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
             <select class="form-select form-select-sm" id="location_id" name="location_id" required>
                 <option value="">-- เลือกสถานที่ --</option>
-                {% for location in locations %}
-                    <option value="{{ location.id }}"
-                            {% if form_data and form_data.location_id|string == location.id|string %}selected{% endif %}>
-                        {{ location.name }}
-                    </option>
-                {% endfor %}
+                {% for location in locations %}<option value="{{ location.id }}" {% if form_data and form_data.location_id|string == location.id|string %}selected{% endif %}>{{ location.name }}</option>{% endfor %}
             </select>
         </div>
         <div class="col-md-6 mb-3">
             <label for="quantity" class="form-label">จำนวน <span class="text-danger">*</span></label>
-            <input type="number" min="1" step="1" class="form-control form-control-sm" id="quantity" name="quantity" required
-                   value="{{ form_data.quantity if form_data else '' }}">
+            <input type="number" min="1" step="1" class="form-control form-control-sm" id="quantity" name="quantity" required value="{{ form_data.quantity if form_data else '' }}">
         </div>
         <div class="col-md-6 mb-3">
             <label for="cost_per_unit" class="form-label">ต้นทุนต่อหน่วย (บาท)</label>
-            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="cost_per_unit" name="cost_per_unit"
-                   placeholder="เช่น 150.75"
-                   value="{{ form_data.cost_per_unit if form_data and form_data.cost_per_unit is not none else '' }}">
-                   {# Display empty string if value is None or not present #}
+            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="cost_per_unit" name="cost_per_unit" placeholder="เช่น 150.75" value="{{ form_data.cost_per_unit if form_data and form_data.cost_per_unit is not none else '' }}">
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="expiry_date" class="form-label">วันหมดอายุ (ถ้ามี)</label>
-            <input type="date" class="form-control form-control-sm" id="expiry_date" name="expiry_date"
-                   value="{{ form_data.expiry_date if form_data else '' }}">
+
+        {# --- วันที่ผลิต และ วันหมดอายุ (แก้ไข) --- #}
+        <div class="col-md-6 mb-3 hidden" id="production_date_group"> {# Default hidden #}
+            <label for="production_date" class="form-label">วันผลิต</label>
+            <input type="date" class="form-control form-control-sm" id="production_date" name="production_date" value="{{ form_data.production_date if form_data else '' }}">
+            <div id="calculated_expiry_display" class="form-text text-info mt-1 fw-bold"></div> {# แสดงวันหมดอายุที่คำนวณ #}
         </div>
+        <div class="col-md-6 mb-3 hidden" id="expiry_date_group"> {# Default hidden #}
+            <label for="expiry_date" class="form-label">วันหมดอายุ</label>
+            <input type="date" class="form-control form-control-sm" id="expiry_date" name="expiry_date" value="{{ form_data.expiry_date if form_data else '' }}">
+            <div class="form-text">กรอกหากไม่ทราบวันผลิต หรือสินค้าไม่มี Shelf Life กำหนด</div>
+        </div>
+        {# --------------------------------------- #}
+
          <div class="col-12 mb-3">
             <label for="notes" class="form-label">หมายเหตุ</label>
             <textarea class="form-control form-control-sm" id="notes" name="notes" rows="3">{{ form_data.notes if form_data else '' }}</textarea>
         </div>
     </div>
-
     <div class="mt-4">
         <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>บันทึกรับเข้า</button>
         <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="btn btn-secondary"><i class="bi bi-x-lg me-2"></i>ยกเลิก</a>
@@ -100,115 +77,215 @@
 </form>
 {% endblock %}
 
-{# --- JavaScript Block for Cascading Dropdown and Cost Pre-fill --- #}
+{# --- JavaScript Block (สำคัญมาก ต้องใช้โค้ดนี้) --- #}
 {% block scripts_extra %}
 <script>
     const categorySelect = document.getElementById('category_select');
     const productSelect = document.getElementById('product_select');
-    const productIdInput = document.getElementById('product_id'); // Hidden input
+    const productIdInput = document.getElementById('product_id');
+    const productShelfLifeInput = document.getElementById('product_shelf_life'); // Hidden input for shelf life
     const costInput = document.getElementById('cost_per_unit');
+    const productionDateGroup = document.getElementById('production_date_group');
+    const expiryDateGroup = document.getElementById('expiry_date_group');
+    const productionDateInput = document.getElementById('production_date');
+    const expiryDateInput = document.getElementById('expiry_date');
+    const calculatedExpiryDisplay = document.getElementById('calculated_expiry_display');
 
+    // Function to show/hide date inputs based on shelf life
+    function toggleDateInputs(shelfLifeDaysStr) {
+        const shelfLife = shelfLifeDaysStr !== null && shelfLifeDaysStr !== '' && !isNaN(parseInt(shelfLifeDaysStr, 10))
+                          ? parseInt(shelfLifeDaysStr, 10)
+                          : null;
+
+        if (shelfLife !== null && shelfLife >= 0) {
+            // มี Shelf life: แสดงช่องวันผลิต, ซ่อนช่องวันหมดอายุ
+            productionDateGroup.classList.remove('hidden');
+            expiryDateGroup.classList.add('hidden');
+            expiryDateInput.value = ''; // Clear manual expiry date
+            productionDateInput.required = true; // ทำให้ต้องกรอกวันผลิต
+            expiryDateInput.required = false;
+            calculateAndDisplayExpiry(); // Calculate on toggle
+        } else {
+            // ไม่มี Shelf life: ซ่อนช่องวันผลิต, แสดงช่องวันหมดอายุ
+            productionDateGroup.classList.add('hidden');
+            expiryDateGroup.classList.remove('hidden');
+            productionDateInput.value = ''; // Clear production date
+            productionDateInput.required = false;
+            expiryDateInput.required = false; // อาจจะไม่บังคับกรอกวันหมดอายุ ถ้าสินค้าไม่มีจริงๆ
+            calculatedExpiryDisplay.textContent = ''; // Clear calculated display
+        }
+    }
+
+    // Function to calculate and display expiry date
+    function calculateAndDisplayExpiry() {
+        const shelfLifeStr = productShelfLifeInput.value;
+        const prodDateStr = productionDateInput.value;
+        calculatedExpiryDisplay.textContent = ''; // Clear previous
+
+        const shelfLife = shelfLifeStr !== '' && !isNaN(parseInt(shelfLifeStr, 10))
+                          ? parseInt(shelfLifeStr, 10)
+                          : null;
+
+        if (shelfLife !== null && shelfLife >= 0 && prodDateStr) {
+            try {
+                // Split date string manually to avoid timezone issues with Date constructor
+                const parts = prodDateStr.split('-');
+                if (parts.length === 3) {
+                    const year = parseInt(parts[0], 10);
+                    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS Date
+                    const day = parseInt(parts[2], 10);
+                    const prodDate = new Date(Date.UTC(year, month, day)); // Use UTC
+
+                    if (!isNaN(prodDate.getTime())) { // Check if date is valid
+                         // Add days using UTC methods
+                        prodDate.setUTCDate(prodDate.getUTCDate() + shelfLife);
+
+                        // Format YYYY-MM-DD for display
+                        const expiryYear = prodDate.getUTCFullYear();
+                        const expiryMonth = String(prodDate.getUTCMonth() + 1).padStart(2, '0');
+                        const expiryDay = String(prodDate.getUTCDate()).padStart(2, '0');
+                        const formattedExpiry = `<span class="math-inline">\{expiryYear\}\-</span>{expiryMonth}-${expiryDay}`;
+
+                        calculatedExpiryDisplay.textContent = `≈ วันหมดอายุ: ${formattedExpiry}`;
+                    } else {
+                         calculatedExpiryDisplay.textContent = "รูปแบบวันผลิตไม่ถูกต้อง";
+                    }
+                } else {
+                    calculatedExpiryDisplay.textContent = "รูปแบบวันผลิตไม่ถูกต้อง";
+                }
+            } catch (e) {
+                console.error("Error calculating expiry date:", e);
+                calculatedExpiryDisplay.textContent = "ไม่สามารถคำนวณวันหมดอายุได้";
+            }
+        }
+    }
+
+    // Function to fetch products
     async function fetchAndPopulateProducts(categoryId, selectedProductId = null) {
-        // Clear and disable product select
         productSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
         productSelect.disabled = true;
-        productIdInput.value = selectedProductId || ''; // Update hidden input
+        productIdInput.value = selectedProductId || '';
+        productShelfLifeInput.value = ''; // Clear shelf life
+        toggleDateInputs(null); // Reset date inputs
 
         if (!categoryId) {
             productSelect.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>';
-            if (!costInput.value && document.activeElement !== costInput) { // Avoid clearing if user is typing
-                costInput.value = '';
-            }
+            if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
             return;
         }
 
         try {
+            // Use API endpoint that returns ProductBasic including shelf_life_days
             const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
 
-            if (!response.ok) {
-                // Handle non-OK responses (like 404 Not Found) gracefully
-                if (response.status === 404) {
-                    productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>';
-                    console.warn(`No products found for category ID ${categoryId}`);
-                } else {
-                    // For other errors, show a generic error message
-                    productSelect.innerHTML = `<option value="">-- ข้อผิดพลาด ${response.status} --</option>`;
-                    console.error(`HTTP error! status: ${response.status}`);
-                }
+             if (!response.ok) {
+                if (response.status === 404) { productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>'; }
+                else { productSelect.innerHTML = `<option value="">-- ข้อผิดพลาด ${response.status} --</option>`; }
                 if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
-                return; // Exit the function after handling error/no data
+                toggleDateInputs(null); // Ensure reset on error
+                return;
             }
 
+
             const products = await response.json();
-            productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>'; // Reset placeholder
+            productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
 
             if (products && products.length > 0) {
+                let initialShelfLife = null; // Track shelf life of the pre-selected product
                 products.forEach(product => {
                     const option = document.createElement('option');
                     option.value = product.id;
                     option.textContent = `${product.name} (SKU: ${product.sku})`;
-                    // Store standard_cost in dataset (ensure it's included in ProductBasic schema)
+                    // Store shelf_life and cost in dataset
+                    const shelfLifeValue = (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : '';
+                    option.dataset.shelfLife = shelfLifeValue;
                     option.dataset.cost = product.standard_cost !== null && product.standard_cost !== undefined
-                                          ? parseFloat(product.standard_cost).toFixed(2)
-                                          : '';
+                                          ? parseFloat(product.standard_cost).toFixed(2) : '';
+
                     if (selectedProductId && parseInt(product.id) === parseInt(selectedProductId)) {
                         option.selected = true;
+                        initialShelfLife = shelfLifeValue; // Get shelf life for initial toggle
                     }
                     productSelect.appendChild(option);
                 });
-                productSelect.disabled = false; // Enable product select
+                productSelect.disabled = false;
+
+                // Set initial shelf life and toggle inputs if pre-selected
+                if(selectedProductId && initialShelfLife !== null){
+                     productShelfLifeInput.value = initialShelfLife;
+                     // Use setTimeout to allow the selected option to be fully processed before toggling
+                     setTimeout(() => toggleDateInputs(initialShelfLife), 0);
+                } else {
+                     toggleDateInputs(null); // Reset if no product is pre-selected
+                }
+
 
                 // Trigger change if pre-selected to fill cost
                 if (selectedProductId) {
-                    productSelect.dispatchEvent(new Event('change'));
+                    // Use setTimeout to ensure the 'change' event fires after the shelf life is set and inputs toggled
+                     setTimeout(() => productSelect.dispatchEvent(new Event('change')), 0);
                 } else if (!costInput.value && document.activeElement !== costInput) {
-                    costInput.value = ''; // Clear cost only if not pre-filled and not being typed in
+                    costInput.value = '';
+                    // toggleDateInputs(null); // Already handled above
                 }
 
             } else {
-                // API returned 200 OK but products array is empty
                 productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>';
                 if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
+                 toggleDateInputs(null); // Ensure reset if no products
             }
         } catch (error) {
             console.error('Error fetching or processing products:', error);
             productSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาดในการโหลด --</option>';
             if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
+             toggleDateInputs(null); // Ensure reset on error
         }
     }
 
-    // Event listener for category dropdown
+    // --- Event Listeners ---
     categorySelect.addEventListener('change', function() {
         fetchAndPopulateProducts(this.value);
     });
 
-    // Event listener for product dropdown
     productSelect.addEventListener('change', function() {
-         productIdInput.value = this.value; // Update hidden input
+         productIdInput.value = this.value;
          const selectedOption = this.options[this.selectedIndex];
+         let shelfLifeStr = ''; // Default to empty string
 
-         // Pre-fill cost only if cost field is currently empty
-         if (selectedOption && selectedOption.value && selectedOption.dataset.cost !== undefined) {
-             if (!costInput.value) { // Check if cost input is empty before pre-filling
+         if (selectedOption && selectedOption.value) {
+             shelfLifeStr = selectedOption.dataset.shelfLife || ''; // Get shelf life from dataset
+             productShelfLifeInput.value = shelfLifeStr;
+
+             // Pre-fill cost only if cost field is currently empty
+             if (selectedOption.dataset.cost !== undefined && !costInput.value) {
                  costInput.value = selectedOption.dataset.cost;
              }
          } else {
+             productShelfLifeInput.value = '';
              // Clear cost only if '-- เลือกสินค้า --' is selected AND cost field is empty
-             if (!this.value && !costInput.value) {
+             if (!costInput.value) {
                  costInput.value = '';
              }
          }
+         toggleDateInputs(shelfLifeStr); // Toggle inputs based on selected product's shelf life
     });
 
-    // Initial load logic (e.g., when returning from form error)
-    document.addEventListener('DOMContentLoaded', (event) => {
-        const initialProductId = productIdInput.value; // From hidden input value set by Jinja
-        const initialCategoryId = categorySelect.value; // From selected option set by Jinja
+    // Add listener to production date input to recalculate expiry
+    productionDateInput.addEventListener('change', calculateAndDisplayExpiry);
+    productionDateInput.addEventListener('input', calculateAndDisplayExpiry); // For immediate feedback
 
-        // If a category is selected on load, trigger product fetch
+    // --- Initial load logic ---
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const initialProductId = productIdInput.value;
+        const initialCategoryId = categorySelect.value;
+
         if (initialCategoryId) {
-            console.log(`Initial load - Category ID: ${initialCategoryId}, Product ID: ${initialProductId || 'None'}`);
+            // Fetch products first. The logic inside fetchAndPopulateProducts
+            // will handle setting the selected product and toggling inputs.
             fetchAndPopulateProducts(initialCategoryId, initialProductId);
+        } else {
+            // Ensure inputs start hidden if no category selected initially
+             toggleDateInputs(null);
         }
     });
 

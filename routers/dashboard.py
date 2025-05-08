@@ -1,22 +1,24 @@
 # routers/dashboard.py
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-import schemas # Import the main schemas package
-from services import dashboard_service # Import the specific service
+# Adjust imports
+import schemas
+from services import dashboard_service
 from database import get_db
 
 API_INCLUDE_IN_SCHEMA = True
 
+# *** ลบ prefix="/api/dashboard" ออกจาก APIRouter ที่นี่ ***
 router = APIRouter(
-    prefix="/api/dashboard",
+    # prefix="/api/dashboard", # <--- ลบบรรทัดนี้
     tags=["API - Dashboard"],
     responses={404: {"description": "Not found"}},
     include_in_schema=API_INCLUDE_IN_SCHEMA
 )
 
+# --- API Routes Only ---
 @router.get("/kpis", response_model=schemas.KpiSummarySchema)
 async def get_kpi_summary(db: Session = Depends(get_db)):
     """ Get Key Performance Indicators for the dashboard. """
@@ -25,7 +27,6 @@ async def get_kpi_summary(db: Session = Depends(get_db)):
         return kpis
     except Exception as e:
         print(f"Error fetching KPIs API: {type(e).__name__} - {e}")
-        # Let the service handle internal errors for now, or re-raise specific HTTP errors
         raise HTTPException(status_code=500, detail="Could not calculate dashboard KPIs.")
 
 @router.get("/sales-trend-weekly", response_model=List[schemas.SalesTrendItemSchema])

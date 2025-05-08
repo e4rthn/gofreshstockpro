@@ -6,7 +6,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base # Absolute Import
 
-class TransactionType(str, enum.Enum): # ใช้ str enum
+# --- Python Enum Definition ---
+class TransactionType(str, enum.Enum):
     STOCK_IN = "STOCK_IN"
     SALE = "SALE"
     ADJUSTMENT_ADD = "ADJUSTMENT_ADD"
@@ -15,20 +16,43 @@ class TransactionType(str, enum.Enum): # ใช้ str enum
     TRANSFER_IN = "TRANSFER_IN"
     INITIAL = "INITIAL"
 
+# --- SQLAlchemy Model Definition ---
 class InventoryTransaction(Base):
     __tablename__ = "inventory_transactions"
+
     id = Column(Integer, primary_key=True, index=True)
-    transaction_type = Column(SQLAlchemyEnum(TransactionType, name="transactiontypeenum"), nullable=False, index=True) # ใส่ name ให้ Enum
+
+    # *** แก้ไข name ให้ตรงกับใน DB (คาดว่าคือ 'transactiontype') และเพิ่ม native_enum=True ***
+    transaction_type = Column(
+        SQLAlchemyEnum(
+            TransactionType,
+            name="transactiontype",     # <-- เปลี่ยนเป็นชื่อนี้ (หรือชื่อ Type ที่เจอใน DB ของคุณ)
+            native_enum=True,         # <-- เพิ่มอันนี้เพื่อให้ใช้ native ENUM ของ Postgres
+            create_constraint=True    # <-- แนะนำให้ใส่ เพื่อให้ SQLAlchemy จัดการ constraint (ถ้าจำเป็น)
+        ),
+        nullable=False,
+        index=True
+    )
+    # **************************************************************************************
+
     quantity_change = Column(Integer, nullable=False)
     transaction_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     notes = Column(Text, nullable=True)
     cost_per_unit = Column(Float, nullable=True)
-    expiry_date = Column(Date, nullable=True)
-    related_transaction_id = Column(Integer, nullable=True, index=True)
+    expiry_date = Column(Date, nullable=True)      # วันหมดอายุ (จาก Stock In หรือคำนวณ)
+    production_date = Column(Date, nullable=True) # วันผลิต (จาก Stock In)
+    related_transaction_id = Column(Integer, nullable=True, index=True) # ใช้สำหรับ link TRANSFER_IN/OUT
+
+    # Foreign Keys
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
 
+    # Relationships
     product = relationship("Product", back_populates="inventory_transactions")
     location = relationship("Location", back_populates="inventory_transactions")
+
     def __repr__(self):
-        return f"<InventoryTransaction(id={self.id}, type={self.transaction_type}, product_id={self.product_id}, qty_change={self.quantity_change})>"
+        return (f"<InventoryTransaction(id={self.id}, "
+                f"type={self.transaction_type.value if self.transaction_type else 'None'}, " # Use .value for Enum
+                f"product_id={self.product_id}, "
+                f"qty_change={self.quantity_change})>")

@@ -6,81 +6,72 @@
 <h1>รายงานการขาย</h1>
 <hr>
 
-{# --- ฟอร์มกรองตามวันที่ (เหมือนเดิม) --- #}
-<form method="get" action="{{ url_for('ui_sales_report') }}" class="row g-3 align-items-end mb-4"> {# ใช้ url_for #}
-    <div class="col-md-4">
-        <label for="start_date" class="form-label">ตั้งแต่วันที่</label>
-        <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ start_date }}">
+{# --- ฟอร์มกรอง (ใช้ Floating Labels) --- #}
+<form method="get" action="/ui/sales/report/" class="row g-3 align-items-end mb-4 filter-section p-3">
+    <div class="col-md-4 form-floating mb-3 mb-md-0">
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}" placeholder=" ">
+        <label for="start_date">ตั้งแต่วันที่</label>
     </div>
-    <div class="col-md-4">
-        <label for="end_date" class="form-label">ถึงวันที่</label>
-        <input type="date" class="form-control form-control-sm" id="end_date" name="end_date" value="{{ end_date }}">
+    <div class="col-md-4 form-floating mb-3 mb-md-0">
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}" placeholder=" ">
+        <label for="end_date">ถึงวันที่</label>
     </div>
     <div class="col-md-auto">
         <button type="submit" class="btn btn-primary btn-sm">ดูรายงาน</button>
-        <a href="{{ url_for('ui_sales_report') }}" class="btn btn-secondary btn-sm">ล้างค่า</a> {# ใช้ url_for #}
+        <a href="/ui/sales/report/" class="btn btn-secondary btn-sm">ล้างค่า</a>
     </div>
 </form>
+{# --- สิ้นสุดฟอร์มกรอง --- #}
 
-{# --- แสดงจำนวนข้อมูล + หน้าปัจจุบัน --- #}
-{% if total_count > 0 %}
-<p>พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p>
-{% endif %}
+{# --- แสดงจำนวนข้อมูล --- #}
+{% if total_count > 0 %} <p class="text-secondary">พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p> {% endif %}
+{% if error %} <div class="alert alert-danger" role="alert">{{ error }}</div> {% endif %}
 
-
-{# --- ตารางแสดงผล (แก้ไข) --- #}
-{% if sales_data_with_profit %} {# <--- ใช้ตัวแปรใหม่ #}
-<div class="table-responsive">
-    <table class="table table-sm table-striped table-hover">
-        <thead class="table-light">
-            <tr>
-                <th>รหัสการขาย</th>
-                <th>วันที่/เวลาขาย</th>
-                <th>สถานที่ขาย</th>
-                <th class="text-end">ยอดรวม (บาท)</th>
-                {# --- เพิ่มคอลัมน์กำไร --- #}
-                <th class="text-end">กำไรโดยประมาณ (บาท)</th>
-                {# ---------------------- #}
-                <th>หมายเหตุ</th>
-            </tr>
-        </thead>
-        <tbody>
-            {# --- วนลูปตัวแปรใหม่ --- #}
-            {% for sale_info in sales_data_with_profit %}
-            {% set sale = sale_info.sale_obj %} {# ดึง Sale object ออกมา #}
-            <tr>
-                <td>{{ sale.id }}</td>
-                <td>{{ sale.sale_date.strftime('%Y-%m-%d %H:%M:%S') if sale.sale_date else '-' }}</td>
-                <td>{{ sale.location.name if sale.location else 'N/A' }}</td>
-                <td class="text-end">{{ "%.2f"|format(sale.total_amount) }}</td>
-                {# --- แสดงกำไร --- #}
-                <td class="text-end {% if sale_info.estimated_profit < 0 %}text-danger{% elif sale_info.estimated_profit > 0 %}text-success{% endif %}">
-                    {{ "%.2f"|format(sale_info.estimated_profit) }}
-                </td>
-                {# --------------- #}
-                <td>{{ sale.notes if sale.notes else '-' }}</td>
-            </tr>
-            {% endfor %}
-            {# --- (Optional) แถวสรุปยอดรวมกำไร --- #}
-            {% if sales_data_with_profit %}
-            <tr class="table-group-divider fw-bold">
-                 <td colspan="4" class="text-end">รวมกำไรโดยประมาณ (หน้านี้):</td>
-                 <td class="text-end">{{ "%.2f"|format(grand_total_profit) }}</td>
-                 <td></td>
-            </tr>
-            {% endif %}
-            {# ----------------------------------- #}
-        </tbody>
-    </table>
+{# --- ตารางแสดงผล --- #}
+<div class="card">
+    <div class="card-body p-0">
+        {% if sales_data_with_profit %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                <thead class="sticky-top">
+                    <tr>
+                        <th>รหัสขาย</th>
+                        <th>วันที่/เวลาขาย</th> {# <-- Header #}
+                        <th>สถานที่</th>
+                        <th class="text-end">ยอดรวม</th>
+                        <th class="text-end">กำไรโดยประมาณ</th>
+                        <th>หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale_info in sales_data_with_profit %}
+                    {% set sale = sale_info.sale_obj %}
+                    <tr>
+                        <td>#{{ sale.id }}</td>
+                        {# *** ใช้ thaitime filter *** #}
+                        <td>{{ sale.sale_date | thaitime(format='%d/%m/%Y %H:%M:%S') }}</td> {# <-- ใช้ format แบบไทย #}
+                        <td>{{ sale.location.name if sale.location else 'N/A' }}</td>
+                        <td class="text-end">{{ "%.2f"|format(sale.total_amount) }}</td>
+                        <td class="text-end {% if sale_info.estimated_profit < 0 %}text-danger-neon{% elif sale_info.estimated_profit > 0 %}text-success-neon{% endif %}">
+                            {{ "%.2f"|format(sale_info.estimated_profit) }}
+                        </td>
+                        <td>{{ sale.notes if sale.notes else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                    {# --- แถวสรุป --- #}
+                    <tr class="table-group-divider fw-bold">
+                         <td colspan="4" class="text-end">รวมกำไรโดยประมาณ (หน้านี้):</td>
+                         <td class="text-end">{{ "%.2f"|format(grand_total_profit) }}</td>
+                         <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %} <p class="text-muted p-4 text-center">ไม่พบข้อมูลการขายในช่วงวันที่ที่เลือก</p> {% endif %}
+    </div>
 </div>
-{% else %}
-<p class="text-muted mt-3">ไม่พบข้อมูลการขายในช่วงวันที่ที่เลือก</p>
-{% endif %}
 
-{# --- Pagination (เหมือนเดิม) --- #}
-<div class="mt-4 d-flex justify-content-center">
-    {% include '_pagination.html' %}
-</div>
-{# ------------------------------------ #}
+{# --- Pagination --- #}
+{% if total_pages > 1 %}<div class="mt-4 d-flex justify-content-center">{% include '_pagination.html' %}</div>{% endif %}
 
 {% endblock %}
