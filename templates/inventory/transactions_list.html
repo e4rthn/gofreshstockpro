@@ -7,7 +7,6 @@
     .filter-section { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--hitech-border); border-radius: 8px; background-color: var(--hitech-surface); }
     .date-cell { font-size: 0.9em; color: var(--hitech-text-secondary); white-space: nowrap; }
     .notes-cell { font-size: 0.85em; color: var(--hitech-text-secondary); font-style: italic; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
-    /* ทำให้ note แสดงเต็มเมื่อ hover แม้จะซ่อนใน mobile */
     .notes-cell:hover { white-space: normal; overflow: visible; position: absolute; background: var(--hitech-surface-hover); padding: 5px; border: 1px solid var(--hitech-border); z-index: 10; max-width: 300px; }
     .qty-positive { color: var(--hitech-success); font-weight: bold; }
     .qty-negative { color: var(--hitech-danger); font-weight: bold; }
@@ -18,18 +17,16 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap"> {# Add flex-wrap #}
-    <h1 class="me-3 mb-2 mb-sm-0"><i class="bi bi-list-check me-2"></i>ประวัติการเคลื่อนไหวสต็อก</h1> {# Adjust margin #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+    <h1 class="me-3 mb-2 mb-sm-0"><i class="bi bi-list-check me-2"></i>ประวัติการเคลื่อนไหวสต็อก</h1>
      <a href="/ui/inventory/summary/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-table me-1"></i>กลับไปหน้าสรุป</a>
 </div>
 
 {% include '_alert_messages.html' %}
 
-{# --- Filter Form --- #}
-<form method="get" action="/ui/inventory/transactions/" class="filter-section">
+<form method="get" action="{{ request.app.url_path_for('ui_view_all_transactions') }}" class="filter-section">
     <div class="row g-3 align-items-end">
-        {# Product Filter #}
-        <div class="col-12 col-md-6 col-lg-3 form-floating"> {# Adjust grid for better stacking #}
+        <div class="col-12 col-md-6 col-lg-3 form-floating">
             <select class="form-select" id="product_id" name="product_id" aria-label="กรองตามสินค้า">
                 <option value="" {% if not selected_product_id %}selected{% endif %}>-- ทุกสินค้า --</option>
                 {% for product in all_products | sort(attribute='name') %}
@@ -40,8 +37,7 @@
             </select>
             <label for="product_id">สินค้า</label>
         </div>
-        {# Location Filter #}
-        <div class="col-12 col-md-6 col-lg-2 form-floating"> {# Adjust grid #}
+        <div class="col-12 col-md-6 col-lg-2 form-floating">
             <select class="form-select" id="location_id" name="location_id" aria-label="กรองตามสถานที่">
                 <option value="" {% if not selected_location_id %}selected{% endif %}>-- ทุกสถานที่ --</option>
                 {% for location in all_locations | sort(attribute='name') %}
@@ -52,8 +48,7 @@
             </select>
              <label for="location_id">สถานที่</label>
         </div>
-        {# Transaction Type Filter #}
-         <div class="col-12 col-md-4 col-lg-2 form-floating"> {# Adjust grid #}
+         <div class="col-12 col-md-4 col-lg-2 form-floating">
             <select class="form-select" id="type" name="type" aria-label="กรองตามประเภท">
                 <option value="" {% if not selected_type %}selected{% endif %}>-- ทุกประเภท --</option>
                 {% for type_enum in all_transaction_types %}
@@ -64,49 +59,48 @@
             </select>
              <label for="type">ประเภท</label>
         </div>
-        {# Date Filters #}
-        <div class="col-12 col-md-4 col-lg-2 form-floating"> {# Adjust grid #}
+        <div class="col-12 col-md-4 col-lg-2 form-floating">
             <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}" placeholder=" ">
             <label for="start_date">ตั้งแต่วันที่</label>
         </div>
-        <div class="col-12 col-md-4 col-lg-2 form-floating"> {# Adjust grid #}
+        <div class="col-12 col-md-4 col-lg-2 form-floating">
              <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}" placeholder=" ">
             <label for="end_date">ถึงวันที่</label>
         </div>
-        {# Action Buttons #}
-        <div class="col-12 col-lg-auto d-flex align-items-end gap-2 mt-3 mt-lg-0"> {# Add top margin for smaller screens #}
+        <div class="col-12 col-lg-auto d-flex align-items-end gap-2 mt-3 mt-lg-0">
             <input type="hidden" name="limit" value="{{ limit }}">
-            <button type="submit" class="btn btn-primary btn-sm flex-grow-1 flex-lg-grow-0">กรองข้อมูล</button> {# Grow on smaller screens #}
-            <a href="/ui/inventory/transactions/?limit={{limit}}" class="btn btn-secondary btn-sm flex-grow-1 flex-lg-grow-0">ล้างค่า</a> {# Grow on smaller screens #}
+            <button type="submit" class="btn btn-primary btn-sm flex-grow-1 flex-lg-grow-0">กรองข้อมูล</button>
+            <a href="{{ request.app.url_path_for('ui_view_all_transactions', limit=limit) }}" class="btn btn-secondary btn-sm flex-grow-1 flex-lg-grow-0">ล้างค่า</a>
         </div>
     </div>
 </form>
-{# --- End Filter Form --- #}
 
-{# --- Display Count --- #}
 {% if total_count > 0 %}
 <p class="text-secondary mt-3">พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p>
 {% endif %}
 
-{# --- Transaction Table --- #}
 <div class="card mt-1">
     <div class="card-body p-0">
         {% if transactions %}
-        <div class="table-responsive"> {# This div makes the table scroll horizontally on small screens #}
+        <div class="table-responsive">
             <table class="table table-sm table-striped table-hover mb-0 align-middle">
                 <thead class="sticky-top">
                     <tr>
-                        {# --- Apply responsive classes here --- #}
-                        <th>วันที่/เวลา</th> {# Keep always visible #}
-                        <th>ประเภท</th> {# Keep always visible #}
-                        <th>สินค้า (SKU)</th> {# Keep always visible #}
-                        <th class="d-none d-lg-table-cell">สถานที่</th> <th class="text-end">+/-</th> {# Keep always visible, shorter header #}
-                        <th class="d-none d-md-table-cell">วันผลิต</th> <th class="d-none d-sm-table-cell">วันหมดอายุ</th> <th class="text-end d-none d-xl-table-cell">ต้นทุน/หน่วย</th> <th class="d-none d-md-table-cell">หมายเหตุ</th> <th class="text-center d-none d-lg-table-cell">อ้างอิง</th> </tr>
+                        <th>วันที่/เวลา</th>
+                        <th>ประเภท</th>
+                        <th>สินค้า (SKU)</th>
+                        <th class="d-none d-lg-table-cell">สถานที่</th>
+                        <th class="text-end">+/-</th>
+                        <th class="d-none d-md-table-cell">วันผลิต</th>
+                        <th class="d-none d-sm-table-cell">วันหมดอายุ</th>
+                        <th class="text-end d-none d-xl-table-cell">ต้นทุน/หน่วย</th>
+                        <th class="d-none d-md-table-cell">หมายเหตุ</th>
+                        <th class="text-center d-none d-lg-table-cell">อ้างอิง</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    {% for tx_dict in transactions %} {# <-- วนลูป List of Dicts #}
+                    {% for tx_dict in transactions %}
                     <tr>
-                        {# --- Apply corresponding responsive classes to td --- #}
                         <td class="date-cell">{{ tx_dict.transaction_date_formatted }}</td>
                         <td>
                             <span class="badge rounded-pill {% if tx_dict.transaction_type_value == 'STOCK_IN' %} text-bg-success {% elif tx_dict.transaction_type_value == 'SALE' %} text-bg-primary {% elif 'ADJUSTMENT' in tx_dict.transaction_type_value %} text-bg-warning text-dark {% elif 'TRANSFER' in tx_dict.transaction_type_value %} text-bg-secondary {% else %} text-bg-light text-dark {% endif %}">
@@ -117,22 +111,27 @@
                             {{ tx_dict.product_name }}
                             <small class="text-muted d-block">({{ tx_dict.product_sku }})</small>
                         </td>
-                        <td class="d-none d-lg-table-cell">{{ tx_dict.location_name }}</td> <td class="text-end {% if tx_dict.quantity_change > 0 %}qty-positive{% elif tx_dict.quantity_change < 0 %}qty-negative{% endif %}">
+                        <td class="d-none d-lg-table-cell">{{ tx_dict.location_name }}</td>
+                        <td class="text-end {% if tx_dict.quantity_change > 0 %}qty-positive{% elif tx_dict.quantity_change < 0 %}qty-negative{% endif %}">
                             {{ "{:+}".format(tx_dict.quantity_change) if tx_dict.quantity_change != 0 else tx_dict.quantity_change }}
                         </td>
-                        <td class="date-cell d-none d-md-table-cell">{{ tx_dict.production_date_formatted }}</td> <td class="date-cell d-none d-sm-table-cell">{{ tx_dict.expiry_date_formatted }}</td> <td class="text-end d-none d-xl-table-cell">{{ "%.2f"|format(tx_dict.cost_per_unit) if tx_dict.cost_per_unit is not none else '-' }}</td> <td class="notes-cell d-none d-md-table-cell" title="{{ tx_dict.notes if tx_dict.notes else '' }}">{{ tx_dict.notes if tx_dict.notes else '-' }}</td> <td class="text-center date-cell d-none d-lg-table-cell"> {% if tx_dict.transaction_type_value == 'SALE' %}
+                        <td class="date-cell d-none d-md-table-cell">{{ tx_dict.production_date_formatted }}</td>
+                        <td class="date-cell d-none d-sm-table-cell">{{ tx_dict.expiry_date_formatted }}</td>
+                        <td class="text-end d-none d-xl-table-cell">{{ "%.2f"|format(tx_dict.cost_per_unit) if tx_dict.cost_per_unit is not none else '-' }}</td>
+                        <td class="notes-cell d-none d-md-table-cell" title="{{ tx_dict.notes if tx_dict.notes else '' }}">{{ tx_dict.notes if tx_dict.notes else '-' }}</td>
+                        <td class="text-center date-cell d-none d-lg-table-cell">
+                            {% if tx_dict.transaction_type_value == 'SALE' %}
                                 Sale #{{ tx_dict.related_transaction_id if tx_dict.related_transaction_id else '-' }}
                             {% elif tx_dict.transaction_type_value == 'TRANSFER_IN' %}
                                 Tx #{{ tx_dict.related_transaction_id if tx_dict.related_transaction_id else '-' }} (Out)
                             {% elif tx_dict.transaction_type_value == 'TRANSFER_OUT' %}
-                                {# Assuming related_transaction_id links IN to OUT. Check logic if needed. #}
-                                {% set related_in_id = db.query(models.InventoryTransaction.id).filter(models.InventoryTransaction.related_transaction_id == tx_dict.id).scalar() %}
-                                Tx #{{ related_in_id if related_in_id else '?' }} (In)
+                                {% set related_in_id = None %} {# Simplified for template, real logic in backend if needed #}
+                                Tx #{{ related_in_id if related_in_id else tx_dict.id }} (In)
                             {% elif 'ADJUSTMENT' in tx_dict.transaction_type_value and tx_dict.notes and 'ตรวจนับสต็อก' in tx_dict.notes %}
                                 {% set parts = tx_dict.notes.split('#') %}
                                 {% if parts|length > 1 and parts[1].split()[0].isdigit() %}
                                     {% set session_id = parts[1].split()[0] %}
-                                    <a href="/ui/stock-counts/sessions/{{ session_id }}" title="ดูรอบนับ #{{ session_id }}">รอบนับ #{{ session_id }}</a>
+                                    <a href="{{ request.app.url_path_for('ui_view_stock_count_session', session_id=session_id) }}" title="ดูรอบนับ #{{ session_id }}">รอบนับ #{{ session_id }}</a>
                                 {% else %} - {% endif %}
                             {% else %} - {% endif %}
                         </td>
@@ -140,20 +139,17 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div> {# End table-responsive #}
+        </div>
         {% else %}
         <p class="text-muted p-4 text-center">ไม่พบข้อมูลการเคลื่อนไหวสต็อกตามเงื่อนไข</p>
         {% endif %}
     </div>
 </div>
-{# --- End Transaction Table --- #}
 
-{# --- Pagination --- #}
 {% if total_pages > 1 %}
 <div class="mt-4 d-flex justify-content-center">
     {% include '_pagination.html' %}
 </div>
 {% endif %}
-{# ---------------- #}
 
 {% endblock %}

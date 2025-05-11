@@ -1,293 +1,424 @@
 {% extends "base.html" %}
-
-{% block title %}รับสินค้าเข้า - GoFresh StockPro{% endblock %}
+{% block title %}รับสินค้าเข้า (ผสมผสาน) - GoFresh StockPro{% endblock %}
 
 {% block head_extra %}
-<style> .hidden { display: none !important; } </style> {# ใช้ !important เพื่อ override #}
+<style>
+    .hidden { display: none !important; }
+    #product_display_info {
+        padding: 0.5rem; margin-top: 0.5rem; border: 1px solid var(--hitech-border);
+        border-radius: 0.25rem; background-color: var(--hitech-surface-hover);
+        min-height: 40px; font-size: 0.9rem;
+    }
+    #product_lookup_error, #product_grid_error {
+        color: var(--hitech-danger); font-size: 0.85rem; min-height: 1.2em;
+    }
+    /* สไตล์สำหรับ Product Grid และ Product Card (คล้าย POS) */
+    #product_card_grid_stock_in {
+        max-height: 300px; /* ปรับความสูงได้ */
+        overflow-y: auto;
+        padding: 0.5rem;
+        border: 1px solid var(--hitech-border);
+        border-radius: 0.25rem;
+        background-color: var(--hitech-bg); /* หรือสีพื้นหลังที่เข้มกว่าเล็กน้อย */
+        margin-top: 0.5rem;
+    }
+    .product-card-stock-in { /* ตั้งชื่อ class ให้ไม่ซ้ำกับ POS ถ้าสไตล์ต่างกัน */
+        border: 1px solid var(--hitech-border);
+        background-color: var(--hitech-surface);
+        padding: 0.5rem; margin: 0.25rem; cursor: pointer;
+        text-align: center; min-height: 80px; display: flex;
+        flex-direction: column; justify-content: space-between;
+        border-radius: 4px; transition: background-color 0.2s ease;
+        font-size: 0.85rem;
+    }
+    .product-card-stock-in:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+        border-color: var(--hitech-accent);
+    }
+    .product-card-stock-in .name { font-weight: bold; color: var(--hitech-text-primary); word-break: break-word; }
+    .product-card-stock-in .sku { font-size: 0.9em; color: var(--hitech-text-secondary); }
+</style>
 {% endblock %}
 
 {% block content %}
-<h1><i class="bi bi-box-arrow-in-down me-2"></i>บันทึกการรับสินค้าเข้า</h1>
+<h1><i class="bi bi-box-arrow-in-down me-2"></i>บันทึกการรับสินค้าเข้า (แบบผสม)</h1>
 <hr>
+{% include '_alert_messages.html' %}
 
-{% if error %}<div class="alert alert-danger alert-dismissible fade show" role="alert"><strong><i class="bi bi-exclamation-triangle-fill me-2"></i>ข้อผิดพลาด:</strong> {{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
-{% if message %}<div class="alert alert-success alert-dismissible fade show" role="alert"><strong><i class="bi bi-check-circle-fill me-2"></i>สำเร็จ:</strong> {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
+<form method="post" id="stockInForm" action="{{ request.app.url_path_for('ui_handle_stock_in_form') }}">
+    <div class="row g-3 p-3 border rounded bg-light-subtle">
+        {# --- ทางเลือกที่ 1: กรอก SKU/Barcode --- #}
+        <div class="col-12 col-md-6 mb-3">
+            <label for="sku_barcode_input" class="form-label">กรอก SKU หรือ Barcode สินค้า</label>
+            <input type="text" class="form-control form-control-sm" id="sku_barcode_input" name="sku_barcode_display_only"
+                   value="{{ form_data.sku_barcode_display_only if form_data else '' }}"
+                   placeholder="พิมพ์ SKU/Barcode แล้ว Enter/Tab">
+            <div id="product_lookup_error" class="mt-1"></div>
+        </div>
 
-<form method="post" action="{{ request.app.url_path_for('ui_handle_stock_in_form') }}">
-    <div class="row g-3 p-3 border rounded bg-light-subtle"> {# ใช้ bg-light-subtle ใน dark mode จะดูดีกว่า #}
-         {# --- Product Selection --- #}
-         <div class="col-md-6 mb-3">
-            <label for="category_select" class="form-label">หมวดหมู่สินค้า <span class="text-danger">*</span></label>
-            <select class="form-select form-select-sm" id="category_select" name="category_select_display" required>
-                <option value="">-- เลือกหมวดหมู่ก่อน --</option>
-                {% for category in categories %}
-                    <option value="{{ category.id }}" {% if form_data and form_data.get('category_id')|string == category.id|string %}selected{% endif %}>
-                        {{ category.name }}
-                    </option>
+        {# --- ทางเลือกที่ 2: เลือกจากหมวดหมู่ > แสดงการ์ดสินค้า --- #}
+        <div class="col-12 col-md-6 mb-3">
+            <label for="category_select_stock_in" class="form-label">หรือ เลือกหมวดหมู่เพื่อแสดงสินค้า</label>
+            <select class="form-select form-select-sm" id="category_select_stock_in">
+                <option value="">-- เลือกหมวดหมู่ --</option>
+                {% for category in categories %} {# ต้องส่ง categories มาจาก backend #}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="product_select" class="form-label">สินค้า <span class="text-danger">*</span></label>
-            <select class="form-select form-select-sm" id="product_select" name="product_select_display_only" required disabled>
-                <option value="">-- กรุณาเลือกหมวดหมู่ก่อน --</option>
-            </select>
-            <input type="hidden" id="product_id" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
-            <input type="hidden" id="product_shelf_life" value=""> {# เก็บ shelf life ไว้ใช้ใน JS #}
+
+        {# --- พื้นที่แสดง Product Card (เมื่อเลือกหมวดหมู่) --- #}
+        <div class="col-12 mb-3">
+            <div id="product_card_grid_stock_in" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
+                {# Product cards จะถูก render ที่นี่โดย JavaScript #}
+                <span class="text-muted p-2" id="product_grid_placeholder_stock_in">-- เลือกหมวดหมู่เพื่อแสดงรายการสินค้า --</span>
+            </div>
+            <div id="product_grid_error" class="mt-1"></div>
         </div>
-         {# --- Location, Quantity, Cost --- #}
-        <div class="col-md-6 mb-3">
+        {# --- จบส่วนเลือกสินค้า --- #}
+
+        <hr class="my-3">
+
+        {# --- แสดงข้อมูลสินค้าที่เลือก และกรอกรายละเอียดการรับเข้า --- #}
+        <div class="col-12 mb-3">
+            <h5>ข้อมูลสินค้าที่เลือก:</h5>
+            <div id="product_display_info">
+                <span class="text-muted">-- ยังไม่ได้เลือกสินค้า --</span>
+            </div>
+            <input type="hidden" id="product_id" name="product_id" value="{{ form_data.product_id if form_data else '' }}">
+            <input type="hidden" id="product_shelf_life" value="{{ form_data.get('product_shelf_life', '') if form_data else '' }}">
+        </div>
+
+        <div class="col-12 col-md-4 mb-3">
             <label for="location_id" class="form-label">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
             <select class="form-select form-select-sm" id="location_id" name="location_id" required>
                 <option value="">-- เลือกสถานที่ --</option>
                 {% for location in locations %}<option value="{{ location.id }}" {% if form_data and form_data.location_id|string == location.id|string %}selected{% endif %}>{{ location.name }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-md-6 mb-3">
+        <div class="col-12 col-md-4 mb-3">
             <label for="quantity" class="form-label">จำนวน <span class="text-danger">*</span></label>
             <input type="number" min="1" step="1" class="form-control form-control-sm" id="quantity" name="quantity" required value="{{ form_data.quantity if form_data else '' }}">
         </div>
-        <div class="col-md-6 mb-3">
+        <div class="col-12 col-md-4 mb-3">
             <label for="cost_per_unit" class="form-label">ต้นทุนต่อหน่วย (บาท)</label>
             <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="cost_per_unit" name="cost_per_unit" placeholder="เช่น 150.75" value="{{ form_data.cost_per_unit if form_data and form_data.cost_per_unit is not none else '' }}">
         </div>
 
-        {# --- วันที่ผลิต และ วันหมดอายุ (แก้ไข) --- #}
-        <div class="col-md-6 mb-3 hidden" id="production_date_group"> {# Default hidden #}
+        <div class="col-12 col-md-6 mb-3 hidden" id="production_date_group">
             <label for="production_date" class="form-label">วันผลิต</label>
             <input type="date" class="form-control form-control-sm" id="production_date" name="production_date" value="{{ form_data.production_date if form_data else '' }}">
-            <div id="calculated_expiry_display" class="form-text text-info mt-1 fw-bold"></div> {# แสดงวันหมดอายุที่คำนวณ #}
+            <div id="calculated_expiry_display" class="form-text text-info mt-1 fw-bold"></div>
         </div>
-        <div class="col-md-6 mb-3 hidden" id="expiry_date_group"> {# Default hidden #}
+        <div class="col-12 col-md-6 mb-3 hidden" id="expiry_date_group">
             <label for="expiry_date" class="form-label">วันหมดอายุ</label>
             <input type="date" class="form-control form-control-sm" id="expiry_date" name="expiry_date" value="{{ form_data.expiry_date if form_data else '' }}">
             <div class="form-text">กรอกหากไม่ทราบวันผลิต หรือสินค้าไม่มี Shelf Life กำหนด</div>
         </div>
-        {# --------------------------------------- #}
 
          <div class="col-12 mb-3">
             <label for="notes" class="form-label">หมายเหตุ</label>
             <textarea class="form-control form-control-sm" id="notes" name="notes" rows="3">{{ form_data.notes if form_data else '' }}</textarea>
         </div>
     </div>
-    <div class="mt-4">
+    <div class="mt-4 form-actions-mobile-full-width">
         <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>บันทึกรับเข้า</button>
         <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="btn btn-secondary"><i class="bi bi-x-lg me-2"></i>ยกเลิก</a>
     </div>
 </form>
 {% endblock %}
 
-{# --- JavaScript Block (สำคัญมาก ต้องใช้โค้ดนี้) --- #}
 {% block scripts_extra %}
 <script>
-    const categorySelect = document.getElementById('category_select');
-    const productSelect = document.getElementById('product_select');
-    const productIdInput = document.getElementById('product_id');
-    const productShelfLifeInput = document.getElementById('product_shelf_life'); // Hidden input for shelf life
-    const costInput = document.getElementById('cost_per_unit');
-    const productionDateGroup = document.getElementById('production_date_group');
-    const expiryDateGroup = document.getElementById('expiry_date_group');
-    const productionDateInput = document.getElementById('production_date');
-    const expiryDateInput = document.getElementById('expiry_date');
-    const calculatedExpiryDisplay = document.getElementById('calculated_expiry_display');
+document.addEventListener('DOMContentLoaded', function() {
+    const skuBarcode_Input = document.getElementById('sku_barcode_input');
+    const productId_Input = document.getElementById('product_id');
+    const productShelfLife_Input = document.getElementById('product_shelf_life');
+    const productDisplay_Info = document.getElementById('product_display_info');
+    const productLookup_Error = document.getElementById('product_lookup_error');
+    const cost_Input = document.getElementById('cost_per_unit');
 
-    // Function to show/hide date inputs based on shelf life
+    const productionDate_Group = document.getElementById('production_date_group');
+    const expiryDate_Group = document.getElementById('expiry_date_group');
+    const productionDate_Input = document.getElementById('production_date');
+    const expiryDate_Input = document.getElementById('expiry_date');
+    const calculatedExpiry_Display = document.getElementById('calculated_expiry_display');
+    const stockIn_Form = document.getElementById('stockInForm');
+
+    const categorySelect_StockIn = document.getElementById('category_select_stock_in');
+    const productCardGrid_StockIn = document.getElementById('product_card_grid_stock_in');
+    const productGridPlaceholder_StockIn = document.getElementById('product_grid_placeholder_stock_in');
+    const productGrid_Error = document.getElementById('product_grid_error');
+
+
+    function updateProductSelectionUI(product) {
+        productId_Input.value = product.id;
+        productDisplay_Info.innerHTML = `<strong>สินค้า:</strong> ${product.name || 'N/A'} (SKU: ${product.sku || 'N/A'})` +
+                                       `${product.barcode ? ` <br><strong>Barcode:</strong> ${product.barcode}` : ''}` +
+                                       `<br><strong>ราคา B2C:</strong> ${product.price_b2c !== null ? product.price_b2c.toFixed(2) : '-'} | <strong>ต้นทุน:</strong> ${product.standard_cost !== null ? product.standard_cost.toFixed(2) : '-'}`;
+        const shelfLife = (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : '';
+        productShelfLife_Input.value = shelfLife;
+        toggleDateInputs(shelfLife);
+
+        if (!cost_Input.value && product.standard_cost !== null && product.standard_cost !== undefined) {
+            cost_Input.value = parseFloat(product.standard_cost).toFixed(2);
+        }
+        productLookup_Error.textContent = ''; // Clear SKU lookup error
+        productGrid_Error.textContent = ''; // Clear grid error
+        // Clear category selection and grid if product selected by SKU
+        if (document.activeElement === skuBarcode_Input || skuBarcode_Input.value.trim() !== '') {
+            // categorySelect_StockIn.value = '';
+            // productCardGrid_StockIn.innerHTML = '';
+            // if (productGridPlaceholder_StockIn) productGridPlaceholder_StockIn.style.display = 'block';
+        }
+    }
+
+    function clearProductSelectionUI() {
+        productId_Input.value = '';
+        productDisplay_Info.innerHTML = '<span class="text-muted">-- ยังไม่ได้เลือกสินค้า --</span>';
+        productShelfLife_Input.value = '';
+        // cost_Input.value = ''; // Optionally clear cost
+        toggleDateInputs(null);
+    }
+
+    function toggleDateInputs(shelfLifeDaysStr) { /* ... (เหมือนเดิม) ... */ }
+    function calculateAndDisplayExpiry() { /* ... (เหมือนเดิม) ... */ }
+    // --- (Copy toggleDateInputs and calculateAndDisplayExpiry from previous example here) ---
     function toggleDateInputs(shelfLifeDaysStr) {
         const shelfLife = shelfLifeDaysStr !== null && shelfLifeDaysStr !== '' && !isNaN(parseInt(shelfLifeDaysStr, 10))
                           ? parseInt(shelfLifeDaysStr, 10)
                           : null;
-
         if (shelfLife !== null && shelfLife >= 0) {
-            // มี Shelf life: แสดงช่องวันผลิต, ซ่อนช่องวันหมดอายุ
-            productionDateGroup.classList.remove('hidden');
-            expiryDateGroup.classList.add('hidden');
-            expiryDateInput.value = ''; // Clear manual expiry date
-            productionDateInput.required = true; // ทำให้ต้องกรอกวันผลิต
-            expiryDateInput.required = false;
-            calculateAndDisplayExpiry(); // Calculate on toggle
+            productionDate_Group.classList.remove('hidden');
+            expiryDate_Group.classList.add('hidden');
+            expiryDate_Input.value = '';
+            productionDate_Input.required = true;
+            expiryDate_Input.required = false;
+            calculateAndDisplayExpiry();
         } else {
-            // ไม่มี Shelf life: ซ่อนช่องวันผลิต, แสดงช่องวันหมดอายุ
-            productionDateGroup.classList.add('hidden');
-            expiryDateGroup.classList.remove('hidden');
-            productionDateInput.value = ''; // Clear production date
-            productionDateInput.required = false;
-            expiryDateInput.required = false; // อาจจะไม่บังคับกรอกวันหมดอายุ ถ้าสินค้าไม่มีจริงๆ
-            calculatedExpiryDisplay.textContent = ''; // Clear calculated display
+            productionDate_Group.classList.add('hidden');
+            expiryDate_Group.classList.remove('hidden');
+            productionDate_Input.value = '';
+            productionDate_Input.required = false;
+            expiryDate_Input.required = false;
+            calculatedExpiry_Display.textContent = '';
         }
     }
 
-    // Function to calculate and display expiry date
     function calculateAndDisplayExpiry() {
-        const shelfLifeStr = productShelfLifeInput.value;
-        const prodDateStr = productionDateInput.value;
-        calculatedExpiryDisplay.textContent = ''; // Clear previous
-
+        const shelfLifeStr = productShelfLife_Input.value;
+        const prodDateStr = productionDate_Input.value;
+        calculatedExpiry_Display.textContent = '';
         const shelfLife = shelfLifeStr !== '' && !isNaN(parseInt(shelfLifeStr, 10))
                           ? parseInt(shelfLifeStr, 10)
                           : null;
-
         if (shelfLife !== null && shelfLife >= 0 && prodDateStr) {
             try {
-                // Split date string manually to avoid timezone issues with Date constructor
                 const parts = prodDateStr.split('-');
                 if (parts.length === 3) {
                     const year = parseInt(parts[0], 10);
-                    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS Date
+                    const month = parseInt(parts[1], 10) - 1;
                     const day = parseInt(parts[2], 10);
-                    const prodDate = new Date(Date.UTC(year, month, day)); // Use UTC
-
-                    if (!isNaN(prodDate.getTime())) { // Check if date is valid
-                         // Add days using UTC methods
+                    const prodDate = new Date(Date.UTC(year, month, day));
+                    if (!isNaN(prodDate.getTime())) {
                         prodDate.setUTCDate(prodDate.getUTCDate() + shelfLife);
-
-                        // Format YYYY-MM-DD for display
                         const expiryYear = prodDate.getUTCFullYear();
                         const expiryMonth = String(prodDate.getUTCMonth() + 1).padStart(2, '0');
                         const expiryDay = String(prodDate.getUTCDate()).padStart(2, '0');
-                        const formattedExpiry = `<span class="math-inline">\{expiryYear\}\-</span>{expiryMonth}-${expiryDay}`;
-
-                        calculatedExpiryDisplay.textContent = `≈ วันหมดอายุ: ${formattedExpiry}`;
-                    } else {
-                         calculatedExpiryDisplay.textContent = "รูปแบบวันผลิตไม่ถูกต้อง";
-                    }
-                } else {
-                    calculatedExpiryDisplay.textContent = "รูปแบบวันผลิตไม่ถูกต้อง";
-                }
+                        const formattedExpiry = `${expiryYear}-${expiryMonth}-${expiryDay}`;
+                        calculatedExpiry_Display.innerHTML = `≈ วันหมดอายุ: <strong class="text-success-neon">${formattedExpiry}</strong>`;
+                    } else { calculatedExpiry_Display.textContent = "รูปแบบวันผลิตไม่ถูกต้อง"; }
+                } else { calculatedExpiry_Display.textContent = "รูปแบบวันผลิตไม่ถูกต้อง"; }
             } catch (e) {
                 console.error("Error calculating expiry date:", e);
-                calculatedExpiryDisplay.textContent = "ไม่สามารถคำนวณวันหมดอายุได้";
+                calculatedExpiry_Display.textContent = "คำนวณวันหมดอายุผิดพลาด";
             }
         }
     }
 
-    // Function to fetch products
-    async function fetchAndPopulateProducts(categoryId, selectedProductId = null) {
-        productSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-        productSelect.disabled = true;
-        productIdInput.value = selectedProductId || '';
-        productShelfLifeInput.value = ''; // Clear shelf life
-        toggleDateInputs(null); // Reset date inputs
 
-        if (!categoryId) {
-            productSelect.innerHTML = '<option value="">-- เลือกหมวดหมู่ก่อน --</option>';
-            if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
+    async function lookupProductBySku() {
+        const scanCode = skuBarcode_Input.value.trim();
+        productLookup_Error.textContent = '';
+        // Don't clear productDisplay_Info immediately, wait for result
+        // productDisplay_Info.innerHTML = '<span class="text-muted">กำลังค้นหา...</span>';
+        // clearProductSelectionUI(); // Clear previous selection
+
+        if (scanCode === "") {
+            // productDisplay_Info.innerHTML = '<span class="text-muted">-- กรุณากรอก SKU/Barcode --</span>';
+            // clearProductSelectionUI(); // Keep previous selection if input is cleared or do nothing.
             return;
         }
+        productDisplay_Info.innerHTML = '<span class="text-muted">กำลังค้นหา SKU/Barcode...</span>';
 
         try {
-            // Use API endpoint that returns ProductBasic including shelf_life_days
-            const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
-
-             if (!response.ok) {
-                if (response.status === 404) { productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>'; }
-                else { productSelect.innerHTML = `<option value="">-- ข้อผิดพลาด ${response.status} --</option>`; }
-                if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
-                toggleDateInputs(null); // Ensure reset on error
-                return;
-            }
-
-
-            const products = await response.json();
-            productSelect.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
-
-            if (products && products.length > 0) {
-                let initialShelfLife = null; // Track shelf life of the pre-selected product
-                products.forEach(product => {
-                    const option = document.createElement('option');
-                    option.value = product.id;
-                    option.textContent = `${product.name} (SKU: ${product.sku})`;
-                    // Store shelf_life and cost in dataset
-                    const shelfLifeValue = (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : '';
-                    option.dataset.shelfLife = shelfLifeValue;
-                    option.dataset.cost = product.standard_cost !== null && product.standard_cost !== undefined
-                                          ? parseFloat(product.standard_cost).toFixed(2) : '';
-
-                    if (selectedProductId && parseInt(product.id) === parseInt(selectedProductId)) {
-                        option.selected = true;
-                        initialShelfLife = shelfLifeValue; // Get shelf life for initial toggle
-                    }
-                    productSelect.appendChild(option);
-                });
-                productSelect.disabled = false;
-
-                // Set initial shelf life and toggle inputs if pre-selected
-                if(selectedProductId && initialShelfLife !== null){
-                     productShelfLifeInput.value = initialShelfLife;
-                     // Use setTimeout to allow the selected option to be fully processed before toggling
-                     setTimeout(() => toggleDateInputs(initialShelfLife), 0);
+            const response = await fetch(`/api/products/lookup-by-scan/${encodeURIComponent(scanCode)}`);
+            if (response.ok) {
+                const product = await response.json();
+                if (product && product.id) {
+                    updateProductSelectionUI(product);
+                    skuBarcode_Input.value = product.sku; // Update input with the canonical SKU
+                    // Optionally clear category select and grid
+                    categorySelect_StockIn.value = '';
+                    productCardGrid_StockIn.innerHTML = '';
+                    if(productGridPlaceholder_StockIn) productGridPlaceholder_StockIn.style.display = 'block';
+                    document.getElementById('quantity').focus();
                 } else {
-                     toggleDateInputs(null); // Reset if no product is pre-selected
+                    productDisplay_Info.innerHTML = '<span class="text-muted">-- ไม่พบสินค้า --</span>';
+                    productLookup_Error.textContent = `ไม่พบสินค้าสำหรับรหัส: "${scanCode}"`;
+                    clearProductSelectionUI();
                 }
-
-
-                // Trigger change if pre-selected to fill cost
-                if (selectedProductId) {
-                    // Use setTimeout to ensure the 'change' event fires after the shelf life is set and inputs toggled
-                     setTimeout(() => productSelect.dispatchEvent(new Event('change')), 0);
-                } else if (!costInput.value && document.activeElement !== costInput) {
-                    costInput.value = '';
-                    // toggleDateInputs(null); // Already handled above
-                }
-
             } else {
-                productSelect.innerHTML = '<option value="">-- ไม่มีสินค้าในหมวดนี้ --</option>';
-                if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
-                 toggleDateInputs(null); // Ensure reset if no products
+                productDisplay_Info.innerHTML = '<span class="text-muted">-- ค้นหาผิดพลาด --</span>';
+                productLookup_Error.textContent = `เกิดข้อผิดพลาดในการค้นหา: ${response.status}`;
+                clearProductSelectionUI();
             }
         } catch (error) {
-            console.error('Error fetching or processing products:', error);
-            productSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาดในการโหลด --</option>';
-            if (!costInput.value && document.activeElement !== costInput) { costInput.value = ''; }
-             toggleDateInputs(null); // Ensure reset on error
+            console.error('Error looking up product by SKU:', error);
+            productDisplay_Info.innerHTML = '<span class="text-muted">-- ค้นหาผิดพลาด --</span>';
+            productLookup_Error.textContent = 'การเชื่อมต่อมีปัญหา โปรดลองอีกครั้ง';
+            clearProductSelectionUI();
         }
     }
 
-    // --- Event Listeners ---
-    categorySelect.addEventListener('change', function() {
-        fetchAndPopulateProducts(this.value);
-    });
-
-    productSelect.addEventListener('change', function() {
-         productIdInput.value = this.value;
-         const selectedOption = this.options[this.selectedIndex];
-         let shelfLifeStr = ''; // Default to empty string
-
-         if (selectedOption && selectedOption.value) {
-             shelfLifeStr = selectedOption.dataset.shelfLife || ''; // Get shelf life from dataset
-             productShelfLifeInput.value = shelfLifeStr;
-
-             // Pre-fill cost only if cost field is currently empty
-             if (selectedOption.dataset.cost !== undefined && !costInput.value) {
-                 costInput.value = selectedOption.dataset.cost;
-             }
-         } else {
-             productShelfLifeInput.value = '';
-             // Clear cost only if '-- เลือกสินค้า --' is selected AND cost field is empty
-             if (!costInput.value) {
-                 costInput.value = '';
-             }
-         }
-         toggleDateInputs(shelfLifeStr); // Toggle inputs based on selected product's shelf life
-    });
-
-    // Add listener to production date input to recalculate expiry
-    productionDateInput.addEventListener('change', calculateAndDisplayExpiry);
-    productionDateInput.addEventListener('input', calculateAndDisplayExpiry); // For immediate feedback
-
-    // --- Initial load logic ---
-    document.addEventListener('DOMContentLoaded', (event) => {
-        const initialProductId = productIdInput.value;
-        const initialCategoryId = categorySelect.value;
-
-        if (initialCategoryId) {
-            // Fetch products first. The logic inside fetchAndPopulateProducts
-            // will handle setting the selected product and toggling inputs.
-            fetchAndPopulateProducts(initialCategoryId, initialProductId);
-        } else {
-            // Ensure inputs start hidden if no category selected initially
-             toggleDateInputs(null);
+    async function loadProductsForCategory(categoryId) {
+        if (!categoryId) {
+            productCardGrid_StockIn.innerHTML = '';
+            if(productGridPlaceholder_StockIn) productGridPlaceholder_StockIn.style.display = 'block';
+            productGrid_Error.textContent = '';
+            return;
         }
-    });
+        if(productGridPlaceholder_StockIn) productGridPlaceholder_StockIn.style.display = 'none';
+        productCardGrid_StockIn.innerHTML = '<div class="col-12 text-center p-3"><span class="text-muted">กำลังโหลดสินค้า...</span></div>';
+        productGrid_Error.textContent = '';
 
+        try {
+            const response = await fetch(`/api/products/by-category/${categoryId}/basic`);
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            const products = await response.json();
+            productCardGrid_StockIn.innerHTML = ''; // Clear loading
+
+            if (products.length > 0) {
+                products.forEach(product => {
+                    const cardCol = document.createElement('div');
+                    // Use Bootstrap's responsive column classes for the grid itself
+                    cardCol.className = 'col'; // Bootstrap grid's default behavior within a .row
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card-stock-in';
+                    card.innerHTML = `<div class="name">${product.name || 'N/A'}</div><div class="sku">SKU: ${product.sku || 'N/A'}</div>`;
+                    card.dataset.productId = product.id;
+                    card.dataset.productName = product.name || 'N/A';
+                    card.dataset.productSku = product.sku || 'N/A';
+                    card.dataset.productBarcode = product.barcode || '';
+                    card.dataset.productPriceB2c = product.price_b2c || '0';
+                    card.dataset.standardCost = product.standard_cost || '0';
+                    const shelfLife = (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : '';
+                    card.dataset.shelfLifeDays = shelfLife;
+
+                    card.addEventListener('click', function() {
+                        // Clear SKU input if product selected from card
+                        // skuBarcode_Input.value = '';
+                        // productLookup_Error.textContent = '';
+                        updateProductSelectionUI({
+                            id: this.dataset.productId,
+                            name: this.dataset.productName,
+                            sku: this.dataset.productSku,
+                            barcode: this.dataset.productBarcode,
+                            price_b2c: parseFloat(this.dataset.productPriceB2c),
+                            standard_cost: parseFloat(this.dataset.standardCost),
+                            shelf_life_days: this.dataset.shelfLifeDays === '' ? null : parseInt(this.dataset.shelfLifeDays)
+                        });
+                        // Optionally: auto-fill SKU input as well for consistency
+                        skuBarcode_Input.value = this.dataset.productSku;
+                        document.getElementById('quantity').focus();
+                    });
+                    cardCol.appendChild(card);
+                    productCardGrid_StockIn.appendChild(cardCol);
+                });
+            } else {
+                productCardGrid_StockIn.innerHTML = '<div class="col-12 text-center p-3"><span class="text-muted">-- ไม่มีสินค้าในหมวดหมู่นี้ --</span></div>';
+            }
+        } catch (error) {
+            console.error('Error fetching products for category:', error);
+            productCardGrid_StockIn.innerHTML = '<div class="col-12 text-center p-3"><span class="text-danger">-- เกิดข้อผิดพลาดในการโหลดสินค้า --</span></div>';
+            productGrid_Error.textContent = 'โหลดสินค้าไม่สำเร็จ';
+        }
+    }
+
+
+    // Event Listeners
+    if (skuBarcode_Input) {
+        skuBarcode_Input.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); lookupProductBySku();
+            }
+        });
+        skuBarcode_Input.addEventListener('blur', function() {
+            // Only lookup on blur if there's content and it's not immediately after an Enter press
+            if (this.value.trim() !== '') {
+                 setTimeout(lookupProductBySku, 100); // Small delay to avoid race conditions with enter
+            }
+        });
+    }
+    if (categorySelect_StockIn) {
+        categorySelect_StockIn.addEventListener('change', function() {
+            loadProductsForCategory(this.value);
+            // Clear SKU input and product display if category is changed
+            // skuBarcode_Input.value = '';
+            // productLookup_Error.textContent = '';
+            // if (this.value !== '') clearProductSelectionUI(); // Clear only if a category is selected
+        });
+    }
+
+    if (productionDate_Input) { /* ... (เหมือนเดิม) ... */ }
+    if (stockIn_Form && productId_Input) { /* ... (เหมือนเดิม) ... */ }
+    // --- (Copy productionDate_Input and stockIn_Form listeners from previous example) ---
+    if (productionDate_Input) {
+        productionDate_Input.addEventListener('change', calculateAndDisplayExpiry);
+        productionDate_Input.addEventListener('input', calculateAndDisplayExpiry);
+    }
+    if (stockIn_Form && productId_Input) {
+        stockIn_Form.addEventListener('submit', function(event) {
+            if (!productId_Input.value) {
+                event.preventDefault();
+                const msg = 'กรุณาค้นหาและเลือกสินค้าให้ถูกต้องก่อนบันทึก';
+                productLookup_Error.textContent = msg;
+                productGrid_Error.textContent = msg;
+                skuBarcode_Input.focus();
+                alert(msg);
+                return;
+            }
+            if (productionDate_Group && !productionDate_Group.classList.contains('hidden') && !productionDate_Input.value) {
+                event.preventDefault(); alert('กรุณาระบุวันผลิต'); productionDate_Input.focus(); return;
+            }
+        });
+    }
+
+
+    // Initial load logic
+    const initialProductIdVal = productId_Input.value;
+    const initialSkuDisplayVal = skuBarcode_Input.value;
+    const initialCategoryVal = "{{ form_data.get('category_id_for_reload', '') if form_data else '' }}"; // Need to pass this from backend if re-rendering with category selected
+
+    if(initialProductIdVal && initialSkuDisplayVal){
+         skuBarcode_Input.value = initialSkuDisplayVal;
+         const initialShelfLife = "{{ form_data.get('product_shelf_life', '') if form_data else '' }}";
+         if (initialShelfLife) {
+             productShelfLife_Input.value = initialShelfLife;
+             toggleDateInputs(initialShelfLife);
+             if (productionDate_Input.value) calculateAndDisplayExpiry();
+         }
+         // Trigger lookup to re-populate all info based on SKU
+         lookupProductBySku();
+    } else if (initialCategoryVal && categorySelect_StockIn) {
+        categorySelect_StockIn.value = initialCategoryVal;
+        loadProductsForCategory(initialCategoryVal);
+        toggleDateInputs(null);
+    }
+    else {
+         toggleDateInputs(null);
+    }
+});
 </script>
 {% endblock %}

@@ -6,9 +6,9 @@
 
 {% include '_alert_messages.html' %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>รอบนับสต็อก</h1>
-    <a href="/ui/stock-counts/sessions/new" class="btn btn-primary"><i class="bi bi-plus-circle-fill me-1"></i>สร้างรอบนับใหม่</a>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+    <h1 class="me-3 mb-2 mb-md-0">รอบนับสต็อก</h1>
+    <a href="{{ request.app.url_path_for('ui_show_create_session_form') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle-fill me-1"></i>สร้างรอบนับใหม่</a>
 </div>
 
 {% if total_count > 0 %} <p class="text-secondary">พบข้อมูลทั้งหมด {{ total_count }} รายการ (หน้าที่ {{ page }} / {{ total_pages }})</p> {% endif %}
@@ -22,10 +22,10 @@
                     <tr>
                         <th>รหัสรอบนับ</th>
                         <th>สถานที่</th>
-                        <th>วันที่เริ่ม</th> {# <-- Header #}
-                        <th>วันที่สิ้นสุด</th> {# <-- Header #}
+                        <th>วันที่เริ่ม</th>
+                        <th class="d-none d-md-table-cell">วันที่สิ้นสุด</th>
                         <th class="text-center">สถานะ</th>
-                        <th>หมายเหตุ</th>
+                        <th class="d-none d-lg-table-cell">หมายเหตุ</th>
                         <th class="text-center">การดำเนินการ</th>
                     </tr>
                 </thead>
@@ -34,12 +34,18 @@
                     <tr>
                         <td>#{{ session.id }}</td>
                         <td>{{ session.location.name if session.location else 'N/A' }}</td>
-                        {# *** ใช้ thaitime filter *** #}
-                        <td>{{ session.start_date | thaitime }}</td>
-                        <td>{{ session.end_date | thaitime }}</td>
-                        <td class="text-center"> {# ... (Badge สถานะ เหมือนเดิม) ... #} </td>
-                        <td>{{ session.notes if session.notes else '-' }}</td>
-                        <td class="text-center"> <a href="/ui/stock-counts/sessions/{{ session.id }}" class="btn btn-sm btn-info">ดู/ดำเนินการ</a> </td>
+                        {# *** แก้ไข format เป็น format_str (ถ้ามีการใช้) หรือใช้ default *** #}
+                        <td>{{ session.start_date | thaitime }}</td> {# Default format #}
+                        <td class="d-none d-md-table-cell">{{ session.end_date | thaitime }}</td> {# Default format #}
+                        <td class="text-center">
+                            <span class="badge rounded-pill {% if session.status.value == 'OPEN' %} text-bg-secondary {% elif session.status.value == 'COUNTING' %} text-bg-info {% elif session.status.value == 'CLOSED' %} text-bg-success {% elif session.status.value == 'CANCELED' %} text-bg-danger {% else %} text-bg-light text-dark {% endif %}">
+                                {{ session.status.value }}
+                            </span>
+                        </td>
+                        <td class="d-none d-lg-table-cell">{{ session.notes if session.notes else '-' }}</td>
+                        <td class="text-center">
+                            <a href="{{ request.app.url_path_for('ui_view_stock_count_session', session_id=session.id) }}" class="btn btn-sm btn-info">ดู/ดำเนินการ</a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -49,7 +55,6 @@
     </div>
 </div>
 
-{# --- Pagination --- #}
 {% if total_pages > 1 %}<div class="mt-4 d-flex justify-content-center">{% include '_pagination.html' %}</div>{% endif %}
 
 {% endblock %}

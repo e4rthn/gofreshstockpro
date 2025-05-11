@@ -3,20 +3,14 @@
 {% block title %}Dashboard - GoFresh StockPro{% endblock %}
 
 {% block head_extra %}
-{# ApexCharts CSS #}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css">
 <style>
-    /* ใช้สไตล์จาก hitech_theme.css เป็นหลัก แต่สามารถ override หรือเพิ่มเฉพาะส่วนได้ */
     .chart-card { margin-bottom: 1.5rem; }
     .table-sm th, .table-sm td { padding: 0.5rem; font-size: 0.875rem; vertical-align: middle;}
-    .loading-placeholder {
-        display: flex; justify-content: center; align-items: center;
-        min-height: 150px; color: var(--hitech-text-secondary);
-    }
+    .loading-placeholder { display: flex; justify-content: center; align-items: center; min-height: 150px; color: var(--hitech-text-secondary); }
     .quick-list-table { margin-bottom: 0; }
     .quick-list-table td a { text-decoration: none; color: var(--hitech-text-primary); transition: color 0.2s ease; }
     .quick-list-table td a:hover { color: var(--hitech-accent); }
-    /* เพิ่มสไตล์สำหรับ icon ใน KPI card ให้เด่นขึ้นเล็กน้อย */
     .kpi-card .kpi-icon { font-size: 3.5rem; opacity: 0.1; transition: opacity 0.3s ease;}
     .kpi-card:hover .kpi-icon { opacity: 0.2; }
 </style>
@@ -25,20 +19,16 @@
 {% block content %}
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0"><i class="bi bi-speedometer2 me-2 text-accent"></i>Dashboard ภาพรวม</h1>
-    {# Optional: Refresh button #}
-    {# <button class="btn btn-sm btn-outline-secondary" onclick="fetchAllDashboardData()"><i class="bi bi-arrow-clockwise"></i> Refresh</button> #}
 </div>
 
-{# --- แถวแสดง KPI Cards --- #}
 <div class="row">
-    {# Added col-12 for consistent stacking base #}
     <div class="col-12 col-sm-6 col-xl-3 mb-4">
-        <div class="card border-left-primary kpi-card h-100"> {# Add h-100 for consistent height if needed #}
+        <div class="card border-left-primary kpi-card h-100">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="card-title">ยอดขาย (วันนี้)</div>
-                        <div id="kpi-today-sales" class="kpi-value"><span class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                        <div id="kpi-today-sales" class="kpi-value"><span class="spinner-border spinner-border-sm" role="status"></span></div>
                     </div>
                     <div class="col-auto"> <i class="bi bi-cash-coin kpi-icon"></i> </div>
                 </div>
@@ -51,7 +41,7 @@
                  <div class="row no-gutters align-items-center">
                      <div class="col mr-2">
                          <div class="card-title">จำนวนรายการขาย (วันนี้)</div>
-                         <div id="kpi-today-transactions" class="kpi-value"><span class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                         <div id="kpi-today-transactions" class="kpi-value"><span class="spinner-border spinner-border-sm text-success" role="status"></span></div>
                      </div>
                      <div class="col-auto"> <i class="bi bi-receipt kpi-icon"></i> </div>
                  </div>
@@ -64,12 +54,11 @@
                  <div class="row no-gutters align-items-center">
                      <div class="col mr-2">
                          <div class="card-title">สินค้าสต็อกติดลบ</div>
-                         <div id="kpi-negative-stock" class="kpi-value"><span class="spinner-border spinner-border-sm text-danger" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                         <div id="kpi-negative-stock" class="kpi-value"><span class="spinner-border spinner-border-sm text-danger" role="status"></span></div>
                      </div>
                      <div class="col-auto"> <i class="bi bi-exclamation-triangle-fill kpi-icon"></i> </div>
                  </div>
              </div>
-             {# ใช้ Hardcoded URL หรือตรวจสอบ Route name ถ้ามี #}
              <a href="#" class="stretched-link" title="ดูรายงานสต็อกติดลบ (ยังไม่สร้าง)"></a>
          </div>
      </div>
@@ -79,20 +68,17 @@
                  <div class="row no-gutters align-items-center">
                      <div class="col mr-2">
                          <div class="card-title">ใกล้หมดอายุ (7 วัน)</div>
-                         <div id="kpi-near-expiry" class="kpi-value"><span class="spinner-border spinner-border-sm text-warning" role="status"><span class="visually-hidden">Loading...</span></span></div>
+                         <div id="kpi-near-expiry" class="kpi-value"><span class="spinner-border spinner-border-sm text-warning" role="status"></span></div>
                      </div>
                      <div class="col-auto"> <i class="bi bi-hourglass-split kpi-icon"></i> </div>
                  </div>
              </div>
-              {# ใช้ Hardcoded URL #}
-              <a href="/ui/inventory/near-expiry/" class="stretched-link" title="ดูรายงานสินค้าใกล้หมดอายุ"></a>
+              <a href="{{ request.app.url_path_for('ui_near_expiry_report') }}" class="stretched-link" title="ดูรายงานสินค้าใกล้หมดอายุ"></a>
          </div>
      </div>
 </div>
 
-{# --- แถวแสดงกราฟ --- #}
 <div class="row">
-     {# Added col-12 for stacking #}
     <div class="col-12 col-lg-7 mb-4">
         <div class="card chart-card">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -100,12 +86,11 @@
             </div>
             <div class="card-body">
                 <div id="sales-trend-chart" style="min-height: 320px;">
-                    <div class="loading-placeholder"><div class="spinner-border text-accent" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Loading...</span></div></div>
+                    <div class="loading-placeholder"><div class="spinner-border text-accent" role="status" style="width: 3rem; height: 3rem;"></div></div>
                 </div>
             </div>
         </div>
     </div>
-     {# Added col-12 for stacking #}
     <div class="col-12 col-lg-5 mb-4">
         <div class="card chart-card">
             <div class="card-header py-3">
@@ -113,36 +98,33 @@
             </div>
             <div class="card-body">
                 <div id="top-products-chart" style="min-height: 320px;">
-                     <div class="loading-placeholder"><div class="spinner-border text-accent" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Loading...</span></div></div>
+                     <div class="loading-placeholder"><div class="spinner-border text-accent" role="status" style="width: 3rem; height: 3rem;"></div></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{# --- แถวแสดงตารางข้อมูลด่วน --- #}
 <div class="row">
-     {# Added col-12 for stacking #}
      <div class="col-12 col-lg-6 mb-4">
          <div class="card">
              <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0">สินค้าสต็อกเหลือน้อย (<= 5 ชิ้น)</h6>
              </div>
              <div class="card-body p-0">
-                  <div id="low-stock-table-container" class="table-responsive"> {# Added table-responsive #}
+                  <div id="low-stock-table-container" class="table-responsive">
                        <div class="loading-placeholder p-3">กำลังโหลด...</div>
                   </div>
              </div>
          </div>
      </div>
-      {# Added col-12 for stacking #}
      <div class="col-12 col-lg-6 mb-4">
           <div class="card">
               <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0">รายการเคลื่อนไหวล่าสุด</h6>
-                <a href="/ui/inventory/transactions/" class="btn btn-sm btn-outline-secondary">ดูทั้งหมด</a>
+                <a href="{{ request.app.url_path_for('ui_view_all_transactions') }}" class="btn btn-sm btn-outline-secondary">ดูทั้งหมด</a>
               </div>
               <div class="card-body p-0">
-                   <div id="recent-transactions-table-container" class="table-responsive"> {# Added table-responsive #}
+                   <div id="recent-transactions-table-container" class="table-responsive">
                        <div class="loading-placeholder p-3">กำลังโหลด...</div>
                    </div>
               </div>
@@ -152,49 +134,45 @@
 {% endblock %}
 
 {% block scripts_extra %}
-{# ApexCharts JS #}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
-    // ... (JavaScript เดิมสำหรับ Dashboard ไม่ต้องแก้ไข) ...
-        // --- Helper Functions ---
-    function formatCurrency(value, showUnit = true) {
+    // --- Helper Functions (JavaScript versions for client-side rendering) ---
+    function formatCurrencyJS(value, showUnit = true) {
         const formatted = (value != null ? parseFloat(value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00');
         return showUnit ? formatted + ' บาท' : formatted;
     }
-    function formatNumber(value) { return value != null ? parseInt(value).toLocaleString('th-TH') : '0'; }
-    function formatDateShort(dateString) { // For Sales Trend Chart X-axis
-        if (!dateString) return '-'; try { const d = new Date(dateString); return d.toLocaleDateString('th-TH', { month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok' }); } catch (e) { return dateString; }
+    function formatNumberJS(value) { return value != null ? parseInt(value).toLocaleString('th-TH') : '0'; }
+    function formatDateShortJS(dateString) {
+        if (!dateString) return '-';
+        try { const d = new Date(dateString); return d.toLocaleDateString('th-TH', { month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok' }); }
+        catch (e) { return dateString; }
     }
-    // *** ฟังก์ชันแปลงเวลาไทยสำหรับ JavaScript ***
-    function formatDateTime(dateString) {
+    function formatDateTimeJS(dateString) {
          if (!dateString) return '-';
          try {
-             const d = new Date(dateString); // Assume input is UTC ISO string or parsable by Date
-             // Use toLocaleString for Thai format and timezone conversion
-             return d.toLocaleString('th-TH', { // Thai locale
+             const d = new Date(dateString);
+             return d.toLocaleString('th-TH', {
                  year: 'numeric', month: 'short', day: 'numeric',
                  hour: '2-digit', minute: '2-digit', hour12: false,
-                 timeZone: 'Asia/Bangkok' // Target timezone
+                 timeZone: 'Asia/Bangkok'
                 });
          } catch (e) {
-             console.error("Error formatting date:", dateString, e);
-             return dateString; // Return original string on error
+             console.error("Error formatting date in JS:", dateString, e);
+             return dateString;
          }
     }
-    // **************************************
 
     // --- API Fetch & Render Functions ---
     async function fetchKpiData() {
         const kpiElements = { sales: document.getElementById('kpi-today-sales'), transactions: document.getElementById('kpi-today-transactions'), negative: document.getElementById('kpi-negative-stock'), expiry: document.getElementById('kpi-near-expiry') };
         try {
-            // Ensure API path is correct based on main.py inclusion
-            const response = await fetch('/api/dashboard/kpis');
+            const response = await fetch('/api/dashboard/kpis'); // Ensure this path is correct
             if (!response.ok) throw new Error(`KPI API Error: ${response.status}`);
             const data = await response.json();
-            if(kpiElements.sales) kpiElements.sales.textContent = formatCurrency(data.today_sales_total);
-            if(kpiElements.transactions) kpiElements.transactions.textContent = formatNumber(data.today_sales_count);
-            if(kpiElements.negative) kpiElements.negative.textContent = formatNumber(data.negative_stock_item_count);
-            if(kpiElements.expiry) kpiElements.expiry.textContent = formatNumber(data.near_expiry_item_count);
+            if(kpiElements.sales) kpiElements.sales.textContent = formatCurrencyJS(data.today_sales_total);
+            if(kpiElements.transactions) kpiElements.transactions.textContent = formatNumberJS(data.today_sales_count);
+            if(kpiElements.negative) kpiElements.negative.textContent = formatNumberJS(data.negative_stock_item_count);
+            if(kpiElements.expiry) kpiElements.expiry.textContent = formatNumberJS(data.near_expiry_item_count);
         } catch (error) { console.error("Error fetching KPI data:", error); for (const key in kpiElements) { if (kpiElements[key]) kpiElements[key].textContent = "Error"; } }
     }
 
@@ -202,23 +180,23 @@
         const chartElement = document.querySelector("#sales-trend-chart"); if (!chartElement) return;
         chartElement.innerHTML = '<div class="loading-placeholder"><div class="spinner-border text-accent" role="status">...</div></div>';
         try {
-            const response = await fetch('/api/dashboard/sales-trend-weekly'); // Correct API Path
+            const response = await fetch('/api/dashboard/sales-trend-weekly');
             if (!response.ok) throw new Error(`Sales Trend API Error: ${response.status}`);
             const apiData = await response.json(); if (!Array.isArray(apiData)) throw new Error("Invalid data format");
             const chartSeries = [{ name: 'ยอดขาย', data: apiData.map(item => parseFloat(item.total_sales || 0)) }];
-            const chartCategories = apiData.map(item => formatDateShort(item.date)); // Format date axis labels
-            var options = { // Use Hi-Tech theme options from previous responses
+            const chartCategories = apiData.map(item => formatDateShortJS(item.date));
+            var options = {
                 chart: { type: 'area', height: 310, background: 'transparent', toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } }, zoom: { enabled: false } },
-                theme: { mode: 'dark', palette: 'palette1' }, // Use dark theme and palette
+                theme: { mode: 'dark', palette: 'palette1' },
                 series: chartSeries,
                 xaxis: { categories: chartCategories, labels: { rotate: -45, style: { colors: 'var(--hitech-text-secondary)', fontSize: '10px' }, trim: true }, axisBorder: {show: false}, axisTicks: {show: false}, tooltip: { theme: 'dark'} },
-                yaxis: { labels: { formatter: function (val) { return val.toLocaleString('th-TH'); }, style: { colors: 'var(--hitech-text-secondary)'} }, show: true }, // Keep Y axis visible for context
+                yaxis: { labels: { formatter: function (val) { return val.toLocaleString('th-TH'); }, style: { colors: 'var(--hitech-text-secondary)'} }, show: true },
                 stroke: { curve: 'smooth', width: 3, colors: ['var(--hitech-accent)'] },
                 fill: { type: 'gradient', gradient: { shade: 'dark', type: "vertical", shadeIntensity: 0.5, gradientToColors: undefined, inverseColors: false, opacityFrom: 0.7, opacityTo: 0.1, stops: [0, 100] } },
-                tooltip: { theme: 'dark', y: { formatter: function (val) { return formatCurrency(val); } }, x: { formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? new Date(apiData[dataPointIndex].date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok'}) : val; } } },
+                tooltip: { theme: 'dark', y: { formatter: function (val) { return formatCurrencyJS(val); } }, x: { formatter: function(val, { dataPointIndex }) { return apiData[dataPointIndex] ? new Date(apiData[dataPointIndex].date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok'}) : val; } } },
                 dataLabels: { enabled: false }, markers: { size: 0 },
-                grid: { show: true, borderColor: 'var(--hitech-border)', strokeDashArray: 4, padding: { left: 0, right: 10} }, // Reduce left padding
-                responsive: [{ breakpoint: 768, options: { xaxis: { labels: { rotate: 0, trim: true, style: { fontSize: '9px' } }}, yaxis: {labels:{style:{fontSize:'9px'}}} } }, { breakpoint: 576, options: { xaxis: { labels: {show:false} }, yaxis:{show:false}, chart:{height:250} }}] // Hide labels on very small screens
+                grid: { show: true, borderColor: 'var(--hitech-border)', strokeDashArray: 4, padding: { left: 0, right: 10} },
+                responsive: [{ breakpoint: 768, options: { xaxis: { labels: { rotate: 0, trim: true, style: { fontSize: '9px' } }}, yaxis: {labels:{style:{fontSize:'9px'}}} } }, { breakpoint: 576, options: { xaxis: { labels: {show:false} }, yaxis:{show:false}, chart:{height:250} }}]
             };
             chartElement.innerHTML = ''; var chart = new ApexCharts(chartElement, options); chart.render();
         } catch (error) { console.error("Error rendering sales trend chart:", error); if(chartElement) chartElement.innerHTML = '<p class="text-center text-danger-neon small p-3">ไม่สามารถโหลดกราฟยอดขายได้</p>'; }
@@ -228,23 +206,23 @@
         const chartElement = document.querySelector("#top-products-chart"); if (!chartElement) return;
         chartElement.innerHTML = '<div class="loading-placeholder"><div class="spinner-border text-accent" role="status">...</div></div>';
         try {
-            const response = await fetch('/api/dashboard/top-products-weekly'); // Correct API Path
+            const response = await fetch('/api/dashboard/top-products-weekly');
             if (!response.ok) throw new Error(`Top Products API Error: ${response.status}`);
             const apiData = await response.json(); if (!Array.isArray(apiData)) throw new Error("Invalid data format");
             if (apiData.length === 0) { chartElement.innerHTML = '<p class="text-center text-muted small p-3">ไม่มีข้อมูลสินค้าขายดีในช่วงนี้</p>'; return; }
             apiData.sort((a, b) => b.value - a.value);
             const chartSeries = [{ name: 'จำนวนที่ขายได้', data: apiData.map(item => item.value) }];
             const chartCategories = apiData.map(item => `${item.product_name}`);
-            var options = { // Use Hi-Tech theme options from previous responses
+            var options = {
                 chart: { type: 'bar', height: 310, background: 'transparent', toolbar: { show: false } },
-                theme: { mode: 'dark' }, // Use dark theme
+                theme: { mode: 'dark' },
                 series: chartSeries,
                 xaxis: { categories: chartCategories, labels: { show: false }, axisBorder: {show: false}, axisTicks: {show: false}, tooltip: { enabled: false } },
                 yaxis: { show: false },
                 plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4, distributed: true, dataLabels: { position: 'bottom'} } },
-                colors: undefined, // Let palette handle distributed colors
-                dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '11px' }, formatter: function(val, opt) { return opt.w.globals.labels[opt.dataPointIndex] + ":  " + formatNumber(val) }, offsetX: 5, dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 } },
-                tooltip: { theme: 'dark', enabled: true, x: { show: false }, y: { title: { formatter: (seriesName, opt) => opt.w.globals.labels[opt.dataPointIndex] }, formatter: (val) => formatNumber(val) + ' ชิ้น' } }, // Enable tooltip but hide x-axis label
+                colors: undefined,
+                dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '11px' }, formatter: function(val, opt) { return opt.w.globals.labels[opt.dataPointIndex] + ":  " + formatNumberJS(val) }, offsetX: 5, dropShadow: { enabled: true, top: 1, left: 1, blur: 1, opacity: 0.5 } },
+                tooltip: { theme: 'dark', enabled: true, x: { show: false }, y: { title: { formatter: (seriesName, opt) => opt.w.globals.labels[opt.dataPointIndex] }, formatter: (val) => formatNumberJS(val) + ' ชิ้น' } },
                 grid: { show: false }, legend: { show: false }
             };
             chartElement.innerHTML = ''; var chart = new ApexCharts(chartElement, options); chart.render();
@@ -255,14 +233,14 @@
         const container = document.getElementById('low-stock-table-container'); if (!container) return;
         container.innerHTML = '<div class="loading-placeholder p-3"><div class="spinner-border spinner-border-sm text-accent" role="status">...</div></div>';
         try {
-            const response = await fetch('/api/dashboard/low-stock-items?limit=5'); // Correct API Path
+            const response = await fetch('/api/dashboard/low-stock-items?limit=5');
             if (!response.ok) throw new Error(`Low Stock API Error: ${response.status}`);
             const items = await response.json(); if (!Array.isArray(items)) throw new Error("Invalid data format");
             if (items.length === 0) { container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีสินค้าสต็อกเหลือน้อย</p>'; return; }
             let tableHtml = '<table class="table table-sm quick-list-table table-hover"><tbody>';
             items.forEach(item => {
-                 const editUrl = `/ui/products/edit/${item.product_id}`; // Use hardcoded URL base
-                tableHtml += `<tr><td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} <small class="text-muted">(${item.product_sku})</small></a></td><td class="text-end"><span class="badge bg-warning text-dark">${formatNumber(item.value)}</span></td></tr>`;
+                 const editUrl = `/ui/products/edit/${item.product_id}`;
+                tableHtml += `<tr><td><a href="${editUrl}" title="แก้ไข ${item.product_name}">${item.product_name} <small class="text-muted">(${item.product_sku})</small></a></td><td class="text-end"><span class="badge bg-warning text-dark">${formatNumberJS(item.value)}</span></td></tr>`;
             });
             tableHtml += '</tbody></table>';
             container.innerHTML = tableHtml;
@@ -273,7 +251,7 @@
         const container = document.getElementById('recent-transactions-table-container'); if (!container) return;
         container.innerHTML = '<div class="loading-placeholder p-3"><div class="spinner-border spinner-border-sm text-accent" role="status">...</div></div>';
         try {
-            const response = await fetch('/api/dashboard/recent-transactions?limit=5'); // Correct API Path
+            const response = await fetch('/api/dashboard/recent-transactions?limit=5');
             if (!response.ok) throw new Error(`Recent Tx API Error: ${response.status}`);
             const transactions = await response.json(); if (!Array.isArray(transactions)) throw new Error("Invalid data format");
             if (transactions.length === 0) { container.innerHTML = '<p class="text-center text-muted p-3 small">ไม่มีรายการเคลื่อนไหวล่าสุด</p>'; return; }
@@ -288,7 +266,7 @@
                  else if (tx.transaction_type.includes('TRANSFER')) typeBadge = `<span class="badge text-bg-secondary">${typeText}</span>`;
                  else typeBadge = `<span class="badge text-bg-light text-dark">${typeText}</span>`;
                  const notesHtml = tx.notes ? `<small class="text-muted d-block ms-1 fst-italic" style="font-size: 0.8em;">Note: ${tx.notes.substring(0, 50)}${tx.notes.length > 50 ? '...' : ''}</small>` : '';
-                 const formattedDate = formatDateTime(tx.transaction_date); // Use the helper
+                 const formattedDate = formatDateTimeJS(tx.transaction_date); // Use JS helper
                  tableHtml += `
                      <tr>
                          <td>
@@ -299,7 +277,7 @@
                              </small>
                              ${notesHtml}
                          </td>
-                         <td class="text-end ${qtyClass} fw-bold" style="font-size: 1.1em;">${tx.quantity_change > 0 ? '+' : ''}${formatNumber(tx.quantity_change)}</td>
+                         <td class="text-end ${qtyClass} fw-bold" style="font-size: 1.1em;">${tx.quantity_change > 0 ? '+' : ''}${formatNumberJS(tx.quantity_change)}</td>
                      </tr>`;
              });
              tableHtml += '</tbody></table>';
@@ -307,7 +285,6 @@
         } catch (error) { console.error("Error fetching recent transactions:", error); if(container) container.innerHTML = '<p class="text-center text-danger-neon small p-3">ไม่สามารถโหลดรายการล่าสุดได้</p>'; }
     }
 
-    // --- Initial Load ---
     function fetchAllDashboardData() {
         fetchKpiData();
         renderSalesTrendChart();
