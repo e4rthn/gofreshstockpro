@@ -13,14 +13,14 @@ from .product import ProductBasic
 # --- Stock Count Item Schemas ---
 class StockCountItemBase(BaseModel):
     product_id: int
-    system_quantity: int
-    counted_quantity: Optional[int] = None
+    system_quantity: float
+    counted_quantity: Optional[float] = None
 
 class StockCountItemCreate(BaseModel):
     product_id: int = Field(...)
 
 class StockCountItemUpdate(BaseModel):
-    counted_quantity: int = Field(..., ge=0)
+    counted_quantity: float = Field(..., ge=0)
 
 class StockCountItem(StockCountItemBase):
     id: int

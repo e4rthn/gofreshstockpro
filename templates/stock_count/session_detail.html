@@ -104,7 +104,7 @@
                                 <td>{{ item.product.name if item.product else 'N/A' }} <small class="text-muted">({{ item.product.sku if item.product else 'N/A' }})</small></td>
                                 <td class="text-end">{{ item.system_quantity }}</td>
                                 <td>
-                                   <input type="number" min="0" step="1" class="form-control form-control-sm text-end count-input"
+                                   <input type="number" min="0" step="any" class="form-control form-control-sm text-end count-input"
                                           name="count_for_{{ item.id }}"
                                           value="{{ item.counted_quantity if item.counted_quantity is not none else '' }}"
                                           placeholder="กรอกยอดนับ"

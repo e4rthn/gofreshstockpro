@@ -147,7 +147,7 @@ async def ui_handle_update_counts(request: Request, session_id: int, db: Session
     for key, value in form_data.items():
         if key.startswith("count_for_"):
             try:
-                item_id = int(key.split("_")[-1]); counted_quantity: Optional[int] = None
+                item_id = int(key.split("_")[-1]); counted_quantity: Optional[float] = None
                 if value.strip() != "":
                     counted_quantity = int(value)
                     if counted_quantity < 0: errors.append(f"ยอดนับของ Item ID {item_id} ต้องไม่ติดลบ"); continue

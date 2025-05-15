@@ -205,7 +205,7 @@ def record_stock_deduction(
     transaction_type: TransactionType,
     product_id: int,
     location_id: int,
-    quantity: int,
+    quantity: float,
     related_transaction_id: Optional[int] = None,
     notes: Optional[str] = None,
     cost_per_unit: Optional[float] = None # Allow passing cost if needed (e.g., from product standard cost)

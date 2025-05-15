@@ -1,5 +1,5 @@
 # models/stock_count_item.py
-from sqlalchemy import Column, Integer, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base # Absolute Import
@@ -7,8 +7,8 @@ from database import Base # Absolute Import
 class StockCountItem(Base):
     __tablename__ = "stock_count_items"
     id = Column(Integer, primary_key=True, index=True)
-    system_quantity = Column(Integer, nullable=False)
-    counted_quantity = Column(Integer, nullable=True)
+    system_quantity = Column(Float, nullable=False)
+    counted_quantity = Column(Float, nullable=True)
     count_date = Column(DateTime(timezone=True), nullable=True)
     session_id = Column(Integer, ForeignKey("stock_count_sessions.id"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)

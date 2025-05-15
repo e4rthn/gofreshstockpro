@@ -35,7 +35,7 @@ class InventoryTransaction(Base):
     )
     # **************************************************************************************
 
-    quantity_change = Column(Integer, nullable=False)
+    quantity_change = Column(Float, nullable=False)
     transaction_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     notes = Column(Text, nullable=True)
     cost_per_unit = Column(Float, nullable=True)

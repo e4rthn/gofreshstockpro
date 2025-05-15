@@ -98,7 +98,7 @@
         </div>
         <div class="col-12 col-md-4 mb-3">
             <label for="quantity" class="form-label">จำนวน <span class="text-danger">*</span></label>
-            <input type="number" min="1" step="1" class="form-control form-control-sm" id="quantity" name="quantity" required value="{{ form_data.quantity if form_data else '' }}">
+            <input type="number" min="0" step="any" class="form-control form-control-sm" id="quantity" name="quantity" required value="{{ form_data.quantity if form_data else '' }}">
         </div>
         <div class="col-12 col-md-4 mb-3">
             <label for="cost_per_unit" class="form-label">ต้นทุนต่อหน่วย (บาท)</label>

@@ -52,7 +52,7 @@
 
         {# --- Quantity and Stock Display --- #}
         <div class="col-md-6 form-floating mb-4">
-            <input type="number" min="1" step="1" class="form-control" id="quantity_transfer" name="quantity" required placeholder="จำนวนที่โอนย้าย" value="{{ form_data.quantity if form_data else '' }}">
+            <input type="number" min="0" step="any" class="form-control" id="quantity_transfer" name="quantity" required placeholder="จำนวนที่โอนย้าย" value="{{ form_data.quantity if form_data else '' }}">
             <label for="quantity_transfer">จำนวนที่โอนย้าย <span class="text-danger">*</span></label>
             <div id="quantity_error_transfer" class="text-danger small mt-1"></div>
         </div>

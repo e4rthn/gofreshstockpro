@@ -49,7 +49,7 @@ async def ui_handle_pos_form(
     location_id: int = Form(...),
     notes: Optional[str] = Form(None),
     item_product_id: List[int] = Form(None, alias="item_product_id"), # Use alias if needed
-    item_quantity: List[int] = Form(None, alias="item_quantity"),
+    item_quantity: List[float] = Form(None, alias="item_quantity"),
     item_unit_price: List[float] = Form(None, alias="item_unit_price"),
     override_stock_check: Optional[bool] = Form(False) # Field from the checkbox
 ):

@@ -158,7 +158,7 @@
     let itemCounter = 0;
 
     // --- Helper Functions ---
-    function formatNumber(value) { return value != null ? parseInt(value).toLocaleString('th-TH') : '0'; }
+    function formatNumber(value) { return value != null ? parseFloat(value).toLocaleString('th-TH') : '0.0'; }
 
     // --- Load Products ---
     async function loadProductsForCategory(categoryId) {
@@ -237,7 +237,7 @@
 
         if (existingRow) {
             const quantityCell = existingRow.querySelector('.item-quantity-display') || existingRow.cells[1];
-            const currentItemQuantity = parseInt(quantityCell.textContent || '0');
+            const currentItemQuantity = parseFloat(quantityCell.textContent || '0');
             const newQuantity = currentItemQuantity + quantity;
             quantityCell.textContent = newQuantity;
             existingRow.cells[3].textContent = (newQuantity * uPrice).toFixed(2); // Update total column
@@ -303,7 +303,7 @@
             const quantityText = row.cells[1] ? row.cells[1].textContent : '0';
             const totalText = row.cells[3] ? row.cells[3].textContent : '0'; // Get item total directly
             // const unitPriceText = row.cells[2] ? row.cells[2].textContent : '0'; // Or unit price if needed
-            const quantity = parseInt(quantityText);
+            const quantity = parseFloat(quantityText);
             const itemTotal = parseFloat(totalText);
             // const unitPrice = parseFloat(unitPriceText);
             if (!isNaN(quantity) && !isNaN(itemTotal)) {

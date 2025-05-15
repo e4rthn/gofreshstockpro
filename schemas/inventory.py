@@ -7,7 +7,7 @@ from datetime import date
 class StockInSchema(BaseModel):
     product_id: int
     location_id: int
-    quantity: int = Field(..., gt=0)
+    quantity: float = Field(..., gt=0)
     cost_per_unit: Optional[float] = None
     # --- เปลี่ยนจาก expiry_date เป็น production_date ---
     production_date: Optional[date] = None # วันที่ผลิต (ถ้ามี)
@@ -30,7 +30,7 @@ class StockInSchema(BaseModel):
 class StockAdjustmentSchema(BaseModel):
     product_id: int
     location_id: int
-    quantity_change: int = Field(...) # เช็ค not-zero ใน route/service
+    quantity_change: float = Field(...) # เช็ค not-zero ใน route/service
     reason: Optional[str] = None
     notes: Optional[str] = None
 
@@ -39,7 +39,7 @@ class StockTransferSchema(BaseModel):
     product_id: int
     from_location_id: int
     to_location_id: int
-    quantity: int = Field(..., gt=0)
+    quantity: float = Field(..., gt=0)
     notes: Optional[str] = None
 
     @validator('to_location_id')

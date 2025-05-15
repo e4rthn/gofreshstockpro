@@ -64,7 +64,7 @@
 
          {# --- Quantity Change --- #}
         <div class="col-md-6 form-floating mb-4">
-            <input type="number" step="1" class="form-control" id="quantity_change" name="quantity_change" required placeholder="จำนวนที่เปลี่ยนแปลง (+/-)" value="{{ form_data.quantity_change if form_data else '' }}">
+            <input type="number" step="any" class="form-control" id="quantity_change" name="quantity_change" required placeholder="จำนวนที่เปลี่ยนแปลง (+/-)" value="{{ form_data.quantity_change if form_data else '' }}">
             <label for="quantity_change">จำนวนที่เปลี่ยนแปลง <span class="text-danger">*</span></label>
              <div class="form-text position-absolute bottom-0 start-0 ms-2 mb-n4">ใส่ค่าบวกเพื่อเพิ่ม, ค่าลบเพื่อลด (ห้ามใส่ 0)</div>
         </div>

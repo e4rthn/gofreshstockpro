@@ -108,7 +108,7 @@ async def ui_handle_stock_in_form(
     request: Request, db: Session = Depends(get_db),
     product_id: int = Form(...),
     location_id: int = Form(...),
-    quantity: int = Form(...),
+    quantity: float = Form(...),
     sku_barcode_display_only: Optional[str] = Form(None),
     category_id_for_reload: Optional[str] = Form(None), # For re-rendering category dropdown
     product_shelf_life: Optional[str] = Form(None),
@@ -288,7 +288,7 @@ async def ui_show_transfer_form(request: Request, db: Session = Depends(get_db))
 async def ui_handle_transfer_form(
     request: Request, db: Session = Depends(get_db), product_id: int = Form(...),
     from_location_id: int = Form(...), to_location_id: int = Form(...),
-    quantity: int = Form(...), notes: Optional[str] = Form(None),
+    quantity: float = Form(...), notes: Optional[str] = Form(None),
     sku_barcode_display_only: Optional[str] = Form(None), category_id_for_reload: Optional[str] = Form(None)
 ):
     templates = request.app.state.templates

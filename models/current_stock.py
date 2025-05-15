@@ -8,7 +8,7 @@ from database import Base # Absolute Import
 class CurrentStock(Base):
     __tablename__ = "current_stock"
     id = Column(Integer, primary_key=True, index=True)
-    quantity = Column(Integer, nullable=False, default=0)
+    quantity = Column(Float, nullable=False, default=0.0)
     last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)

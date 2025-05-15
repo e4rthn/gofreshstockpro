@@ -6,7 +6,7 @@ from database import Base # Absolute Import
 class SaleItem(Base):
     __tablename__ = "sale_items"
     id = Column(Integer, primary_key=True, index=True)
-    quantity = Column(Integer, nullable=False)
+    quantity = Column(Float, nullable=False)
     unit_price = Column(Float, nullable=False)
     original_unit_price = Column(Float, nullable=True)       # Field สำหรับ RTC
     discount_amount = Column(Float, nullable=True, default=0.0) # Field สำหรับ RTC
