@@ -19,7 +19,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
     <h1 class="me-3 mb-2 mb-sm-0"><i class="bi bi-list-check me-2"></i>ประวัติการเคลื่อนไหวสต็อก</h1>
-     <a href="/ui/inventory/summary/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-table me-1"></i>กลับไปหน้าสรุป</a>
+     <a href="{{ request.app.url_path_for('ui_view_inventory_summary') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-table me-1"></i>กลับไปหน้าสรุป</a>
 </div>
 
 {% include '_alert_messages.html' %}
@@ -29,9 +29,9 @@
         <div class="col-12 col-md-6 col-lg-3 form-floating">
             <select class="form-select" id="product_id" name="product_id" aria-label="กรองตามสินค้า">
                 <option value="" {% if not selected_product_id %}selected{% endif %}>-- ทุกสินค้า --</option>
-                {% for product in all_products | sort(attribute='name') %}
-                <option value="{{ product.id }}" {% if selected_product_id == product.id %}selected{% endif %}>
-                    {{ product.name }} ({{ product.sku }})
+                {% for product_item in all_products | sort(attribute='name') %}
+                <option value="{{ product_item.id }}" {% if selected_product_id == product_item.id %}selected{% endif %}>
+                    {{ product_item.name }} ({{ product_item.sku }})
                 </option>
                 {% endfor %}
             </select>
@@ -40,9 +40,9 @@
         <div class="col-12 col-md-6 col-lg-2 form-floating">
             <select class="form-select" id="location_id" name="location_id" aria-label="กรองตามสถานที่">
                 <option value="" {% if not selected_location_id %}selected{% endif %}>-- ทุกสถานที่ --</option>
-                {% for location in all_locations | sort(attribute='name') %}
-                <option value="{{ location.id }}" {% if selected_location_id == location.id %}selected{% endif %}>
-                    {{ location.name }}
+                {% for location_item in all_locations | sort(attribute='name') %}
+                <option value="{{ location_item.id }}" {% if selected_location_id == location_item.id %}selected{% endif %}>
+                    {{ location_item.name }}
                 </option>
                 {% endfor %}
             </select>
@@ -51,9 +51,9 @@
          <div class="col-12 col-md-4 col-lg-2 form-floating">
             <select class="form-select" id="type" name="type" aria-label="กรองตามประเภท">
                 <option value="" {% if not selected_type %}selected{% endif %}>-- ทุกประเภท --</option>
-                {% for type_enum in all_transaction_types %}
-                <option value="{{ type_enum.name }}" {% if selected_type == type_enum.name %}selected{% endif %}>
-                    {{ type_enum.value }}
+                {% for type_enum_item in all_transaction_types %}
+                <option value="{{ type_enum_item.name }}" {% if selected_type == type_enum_item.name %}selected{% endif %}>
+                    {{ type_enum_item.value }}
                 </option>
                 {% endfor %}
             </select>
@@ -68,9 +68,9 @@
             <label for="end_date">ถึงวันที่</label>
         </div>
         <div class="col-12 col-lg-auto d-flex align-items-end gap-2 mt-3 mt-lg-0">
-            <input type="hidden" name="limit" value="{{ limit }}">
+            <input type="hidden" name="limit" value="{{ limit if limit else 30 }}">
             <button type="submit" class="btn btn-primary btn-sm flex-grow-1 flex-lg-grow-0">กรองข้อมูล</button>
-            <a href="{{ request.app.url_path_for('ui_view_all_transactions', limit=limit) }}" class="btn btn-secondary btn-sm flex-grow-1 flex-lg-grow-0">ล้างค่า</a>
+            <a href="{{ request.app.url_path_for('ui_view_all_transactions') }}?limit={{ limit if limit else 30 }}" class="btn btn-secondary btn-sm flex-grow-1 flex-lg-grow-0">ล้างค่า</a>
         </div>
     </div>
 </form>
@@ -113,11 +113,11 @@
                         </td>
                         <td class="d-none d-lg-table-cell">{{ tx_dict.location_name }}</td>
                         <td class="text-end {% if tx_dict.quantity_change > 0 %}qty-positive{% elif tx_dict.quantity_change < 0 %}qty-negative{% endif %}">
-                            {{ "{:+}".format(tx_dict.quantity_change) if tx_dict.quantity_change != 0 else tx_dict.quantity_change }}
+                            {{ "{:+}".format(tx_dict.quantity_change | float) if tx_dict.quantity_change != 0 else (tx_dict.quantity_change | float) }}
                         </td>
                         <td class="date-cell d-none d-md-table-cell">{{ tx_dict.production_date_formatted }}</td>
                         <td class="date-cell d-none d-sm-table-cell">{{ tx_dict.expiry_date_formatted }}</td>
-                        <td class="text-end d-none d-xl-table-cell">{{ "%.2f"|format(tx_dict.cost_per_unit) if tx_dict.cost_per_unit is not none else '-' }}</td>
+                        <td class="text-end d-none d-xl-table-cell">{{ "%.2f"|format(tx_dict.cost_per_unit | float) if tx_dict.cost_per_unit is not none else '-' }}</td>
                         <td class="notes-cell d-none d-md-table-cell" title="{{ tx_dict.notes if tx_dict.notes else '' }}">{{ tx_dict.notes if tx_dict.notes else '-' }}</td>
                         <td class="text-center date-cell d-none d-lg-table-cell">
                             {% if tx_dict.transaction_type_value == 'SALE' %}
@@ -125,13 +125,14 @@
                             {% elif tx_dict.transaction_type_value == 'TRANSFER_IN' %}
                                 Tx #{{ tx_dict.related_transaction_id if tx_dict.related_transaction_id else '-' }} (Out)
                             {% elif tx_dict.transaction_type_value == 'TRANSFER_OUT' %}
-                                {% set related_in_id = None %} {# Simplified for template, real logic in backend if needed #}
-                                Tx #{{ related_in_id if related_in_id else tx_dict.id }} (In)
-                            {% elif 'ADJUSTMENT' in tx_dict.transaction_type_value and tx_dict.notes and 'ตรวจนับสต็อก' in tx_dict.notes %}
-                                {% set parts = tx_dict.notes.split('#') %}
-                                {% if parts|length > 1 and parts[1].split()[0].isdigit() %}
-                                    {% set session_id = parts[1].split()[0] %}
-                                    <a href="{{ request.app.url_path_for('ui_view_stock_count_session', session_id=session_id) }}" title="ดูรอบนับ #{{ session_id }}">รอบนับ #{{ session_id }}</a>
+                                Tx #{{ tx_dict.id }} (In)
+                            {% elif 'ADJUSTMENT' in tx_dict.transaction_type_value and tx_dict.notes and ('ตรวจนับสต็อก' in tx_dict.notes or 'Stock Count Session' in tx_dict.notes) %}
+                                {% set note_parts = tx_dict.notes.split('#') %}
+                                {% if note_parts | length > 1 %}
+                                    {% set session_id_str = note_parts[1].split()[0] %}
+                                    {% if session_id_str.isdigit() %}
+                                        <a href="{{ request.app.url_path_for('ui_view_stock_count_session', session_id=session_id_str|int) }}" title="ดูรอบนับ #{{ session_id_str }}">รอบนับ #{{ session_id_str }}</a>
+                                    {% else %} - {% endif %}
                                 {% else %} - {% endif %}
                             {% else %} - {% endif %}
                         </td>
@@ -148,7 +149,8 @@
 
 {% if total_pages > 1 %}
 <div class="mt-4 d-flex justify-content-center">
-    {% include '_pagination.html' %}
+    {# แก้ไขการ include _pagination.html ให้ส่ง context variables โดยตรง #}
+    {% include '_pagination.html' request=request page=page total_pages=total_pages limit=limit %}
 </div>
 {% endif %}
 

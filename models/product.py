@@ -1,10 +1,12 @@
 # models/product.py
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, Date # <--- เพิ่ม Date ถ้ายังไม่มี
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+import datetime
 
 class Product(Base):
     __tablename__ = "products"
+
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String, unique=True, index=True, nullable=False)
     barcode = Column(String, unique=True, index=True, nullable=True)
@@ -15,11 +17,17 @@ class Product(Base):
     price_b2b = Column(Float, nullable=True)
     image_url = Column(String, nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    shelf_life_days = Column(Integer, nullable=True)
 
-    # --- เพิ่มคอลัมน์ shelf_life_days ---
-    shelf_life_days = Column(Integer, nullable=True) # อายุสินค้า (วัน)
-    # ----------------------------------
+    # For B2C price tracking
+    previous_price_b2c = Column(Float, nullable=True)
+    price_b2c_last_changed = Column(DateTime(timezone=True), nullable=True)
 
+    # For B2B price tracking
+    previous_price_b2b = Column(Float, nullable=True)
+    price_b2b_last_changed = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
     category = relationship("Category", back_populates="products")
     current_stocks = relationship("CurrentStock", back_populates="product", cascade="all, delete-orphan")
     inventory_transactions = relationship("InventoryTransaction", back_populates="product")
