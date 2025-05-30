@@ -452,12 +452,15 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         if (selectedProducts.has(product.id)) {
+            // --- PRODUCT IS ALREADY SELECTED: REMOVE IT ---
             selectedProducts.delete(product.id);
+
             if (selectedProductsListEl) {
                 const listItemToRemove = selectedProductsListEl.querySelector(`li[data-product-id="${product.id}"]`);
                 if (listItemToRemove) listItemToRemove.remove();
             }
             if (cardInGrid) cardInGrid.classList.remove('selected');
+
             if (batchItemsDetailsContainer) { 
                 const detailCardToRemove = batchItemsDetailsContainer.querySelector(`.item-detail-card-mobile[data-product-id-mobile="${product.id}"]`);
                 if (detailCardToRemove) detailCardToRemove.remove();
@@ -467,6 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         } else {
+            // --- PRODUCT IS NOT SELECTED: ADD IT ---
             selectedProducts.set(product.id, productDataForMap);
             if (selectedProductsListEl) {
                 const listItem = document.createElement('li');
@@ -517,11 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let apiUrl = '/api/products?limit=50'; 
         if (categoryId && categoryId.trim() !== "") {
             apiUrl = `/api/products/by-category/${categoryId}/basic`;
-        } else if (!searchQuery || searchQuery.trim() === "") { // If no category and no search, load default
-             // apiUrl is already /api/products?limit=50
         }
-        // If there's a search query but no category, we'll fetch all and filter client-side.
-
         console.log("Fetching products for grid from API URL:", apiUrl);
 
         try {
@@ -535,9 +535,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("API Result for grid:", apiResult);
 
             let products = [];
-            if (apiUrl.includes('/by-category/')) { // Endpoint /api/products/by-category/{category_id}/basic returns a List directly
+            if (apiUrl.includes('/by-category/')) { 
                 products = Array.isArray(apiResult) ? apiResult : [];
-            } else { // Endpoint /api/products returns {"items": [...], "total_count": N}
+            } else { 
                 products = Array.isArray(apiResult.items) ? apiResult.items : [];
             }
             console.log("Parsed products for grid:", products);
@@ -716,12 +716,86 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
      }
-    if (applyProdDateAllBtn && batchDefaultProdDateInput && batchItemsDetailsContainer) { /* ... (เหมือนเดิม) ... */ }
-    if (applyExpDateAllBtn && batchDefaultExpDateInput && batchItemsDetailsContainer && toggleExpiryInputAllSwitch) { /* ... (เหมือนเดิม) ... */ }
-    if(batchStockInForm) batchStockInForm.addEventListener('submit', function(event) { /* ... (validation เหมือนเดิม) ... */ });
+    if (applyProdDateAllBtn && batchDefaultProdDateInput && batchItemsDetailsContainer) { 
+        applyProdDateAllBtn.addEventListener('click', function() {
+            const defaultProdDate = batchDefaultProdDateInput.value;
+            if (!defaultProdDate) { alert('กรุณาเลือกวันผลิตเริ่มต้น'); return; }
+            if (!detailFormRendered && selectedProducts.size === 0) { alert('กรุณาเลือกสินค้าเข้ารายการก่อน'); return; }
+            if (!detailFormRendered && selectedProducts.size > 0) { renderAllDetailFormsMobile(); } 
+
+            batchItemsDetailsContainer.querySelectorAll('.item-detail-card-mobile').forEach(card => {
+                const prodDateInput = card.querySelector('.item-production-date-mobile');
+                const prodDateGroup = card.querySelector('.item-production-date-group-mobile');
+                if (prodDateInput && prodDateGroup && !prodDateGroup.classList.contains('hidden')) { 
+                    prodDateInput.value = defaultProdDate;
+                    prodDateInput.dispatchEvent(new Event('input')); 
+                }
+            });
+        });
+    }
+    if (applyExpDateAllBtn && batchDefaultExpDateInput && batchItemsDetailsContainer && toggleExpiryInputAllSwitch) { 
+        applyExpDateAllBtn.addEventListener('click', function() {
+            const defaultExpDate = batchDefaultExpDateInput.value;
+            if (!defaultExpDate) { alert('กรุณาเลือกวันหมดอายุเริ่มต้น'); return; }
+            if (!detailFormRendered && selectedProducts.size === 0) { alert('กรุณาเลือกสินค้าเข้ารายการก่อน'); return; }
+            if (!detailFormRendered && selectedProducts.size > 0) { renderAllDetailFormsMobile(); } 
+            if (!toggleExpiryInputAllSwitch.checked) { alert('กรุณาเปิด "กรอกวันหมดอายุตรง" ก่อนใช้ปุ่มนี้'); return;}
+
+            batchItemsDetailsContainer.querySelectorAll('.item-detail-card-mobile').forEach(card => {
+                const expDateInput = card.querySelector('.item-expiry-date-mobile');
+                const expDateGroup = card.querySelector('.item-expiry-date-group-mobile');
+                if (expDateInput && expDateGroup && !expDateGroup.classList.contains('hidden')) { 
+                    expDateInput.value = defaultExpDate;
+                }
+            });
+        });
+     }
+    
+    if(batchStockInForm) batchStockInForm.addEventListener('submit', function(event) { 
+        if (selectedProducts.size === 0) {
+            alert('ไม่มีสินค้าในรายการ กรุณาเลือกสินค้าก่อน');
+            event.preventDefault(); return;
+        }
+        if (locationIdBatchSelect && !locationIdBatchSelect.value) {
+            alert('กรุณาเลือกสถานที่จัดเก็บสำหรับ Batch นี้');
+            locationIdBatchSelect.focus();
+            event.preventDefault(); return;
+        }
+        if (!detailFormRendered) { 
+             if(selectedProducts.size > 0){ 
+                renderAllDetailFormsMobile();
+             } else { 
+                alert('กรุณาเลือกสินค้าและกรอกรายละเอียดก่อน');
+                event.preventDefault(); return;
+             }
+        }
+        let allValid = true;
+        if(batchItemsDetailsContainer) batchItemsDetailsContainer.querySelectorAll('.item-detail-card-mobile').forEach((cardElement) => {
+            const qtyInput = cardElement.querySelector('.item-quantity-mobile'); 
+            if (qtyInput && (!qtyInput.value || parseFloat(qtyInput.value) <= 0)) {
+                allValid = false; qtyInput.classList.add('is-invalid');
+            } else if(qtyInput) { qtyInput.classList.remove('is-invalid'); }
+
+            const prodDateInput = cardElement.querySelector('.item-production-date-mobile');
+            const prodDateGroup = cardElement.querySelector('.item-production-date-group-mobile');
+            if (prodDateInput && prodDateGroup && !prodDateGroup.classList.contains('hidden') && prodDateInput.required && !prodDateInput.value) {
+                 allValid = false; prodDateInput.classList.add('is-invalid');
+            } else if (prodDateInput) { prodDateInput.classList.remove('is-invalid');}
+
+            const expDateInput = cardElement.querySelector('.item-expiry-date-mobile');
+            const expDateGroup = cardElement.querySelector('.item-expiry-date-group-mobile');
+             if (expDateInput && expDateGroup && !expDateGroup.classList.contains('hidden') && expDateInput.required && !expDateInput.value) {
+                 allValid = false; expDateInput.classList.add('is-invalid');
+            } else if (expDateInput) { expDateInput.classList.remove('is-invalid'); }
+        });
+        if (!allValid) {
+            alert('กรุณากรอกข้อมูลที่จำเป็น (จำนวน, วันที่) ให้ครบถ้วนและถูกต้องสำหรับสินค้าทุกรายการ');
+            event.preventDefault(); return;
+        }
+    });
         
     updateButtonStates();
-    if(categorySelect) loadProductsForBrowseGridMobile(categorySelect.value, null); 
+    if(categorySelect) loadProductsForBrowseGridMobile(categorySelect.value); 
     showPhase(1); 
     if(phase1Col && phase2Col) {
         window.addEventListener('resize', () => {
@@ -737,17 +811,53 @@ document.addEventListener('DOMContentLoaded', function() {
     if (formDataRawScript && formDataRawScript.textContent) { 
         try {
             const rawData = JSON.parse(formDataRawScript.textContent);
-            if (locationIdBatchSelect && rawData.location_id) { /* ... */ }
+            if (locationIdBatchSelect && rawData.location_id) { locationIdBatchSelect.value = rawData.location_id; }
             const batchNotesMobileEl = document.getElementById('batch_notes_mobile');
-            if (batchNotesMobileEl && rawData.batch_notes) { /* ... */ }
+            if (batchNotesMobileEl && rawData.batch_notes) { batchNotesMobileEl.value = rawData.batch_notes; }
 
             if (Array.isArray(rawData.items) && rawData.items.length > 0) {
-                rawData.items.forEach(item => { /* ... add to selectedProducts map ... */ });
+                rawData.items.forEach(item => {
+                    if(item.product_id && !selectedProducts.has(parseInt(item.product_id))){ 
+                         selectedProducts.set(parseInt(item.product_id), { 
+                             id: parseInt(item.product_id), 
+                             name: item.product_name || `Product ${item.product_id}`, 
+                             sku: item.product_sku || `SKU-${item.product_id}`,
+                             shelf_life_days: item.shelf_life_days !== undefined ? item.shelf_life_days : null,
+                            });
+                    }
+                });
                 
-                if(selectedProductsListEl && noSelectedItemsPlaceholder){ /* ... rebuild list ... */ }
+                if(selectedProductsListEl && noSelectedItemsPlaceholder){
+                    selectedProductsListEl.innerHTML = ''; 
+                    if (selectedProducts.size > 0) noSelectedItemsPlaceholder.classList.add('hidden');
+                    else noSelectedItemsPlaceholder.classList.remove('hidden');
+
+                    selectedProducts.forEach(p => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        listItem.dataset.productId = p.id;
+                        listItem.innerHTML = `<span class="product-info">${p.name} (SKU: ${p.sku})</span>
+                                              <button type="button" class="btn btn-danger btn-sm remove-item-btn"><i class="bi bi-x-lg"></i></button>`;
+                        listItem.querySelector('.remove-item-btn').onclick = function() { /* ... (remove logic from previous version) ... */ };
+                        selectedProductsListEl.appendChild(listItem);
+                    });
+                }
                 
-                if (productBrowseGrid && productBrowseGrid.childElementCount > 0) { /* ... update grid .selected ... */ }
-                else if (productBrowseGrid && categorySelect) { /* ... load grid then update .selected ... */ }
+                if (productBrowseGrid) { // Check if grid exists
+                    const updateGridSelection = () => {
+                        productBrowseGrid.querySelectorAll('.product-card-mobile').forEach(card => {
+                            const cardProductId = parseInt(card.dataset.productId);
+                            if (selectedProducts.has(cardProductId)) card.classList.add('selected');
+                            else card.classList.remove('selected');
+                        });
+                    };
+
+                    if (productBrowseGrid.childElementCount > 0 && !productBrowseGrid.querySelector('.spinner-border')) {
+                        updateGridSelection();
+                    } else if (categorySelect) { 
+                         loadProductsForBrowseGridMobile(categorySelect.value, null).then(updateGridSelection);
+                    }
+                }
 
                 updateButtonStates(); 
 
@@ -755,7 +865,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderAllDetailFormsMobile(); 
                     
                     let currentItemIndex = 0; 
-                    selectedProducts.forEach(productFromMap => { /* ... populate field values ... */ });
+                    selectedProducts.forEach(productFromMap => {
+                         const itemFromRawData = rawData.items.find(itRaw => parseInt(itRaw.product_id) === productFromMap.id);
+                         if (itemFromRawData && batchItemsDetailsContainer) {
+                            const card = batchItemsDetailsContainer.querySelector(`.item-detail-card-mobile[data-product-id-mobile="${productFromMap.id}"]`);
+                            if (card) {
+                                const qtyInput = card.querySelector(`input[name="items[${currentItemIndex}][quantity]"]`);
+                                if (qtyInput && itemFromRawData.quantity) qtyInput.value = itemFromRawData.quantity;
+                                
+                                const prodDateInput = card.querySelector(`input[name="items[${currentItemIndex}][production_date]"]`);
+                                const expDateInput = card.querySelector(`input[name="items[${currentItemIndex}][expiry_date]"]`);
+                                const prodDateGroup = card.querySelector('.item-production-date-group-mobile');
+                                
+                                if (prodDateInput && prodDateGroup && itemFromRawData.production_date && !prodDateGroup.classList.contains('hidden')) {
+                                    prodDateInput.value = itemFromRawData.production_date;
+                                    prodDateInput.dispatchEvent(new Event('input')); 
+                                }
+                                if (expDateInput && itemFromRawData.expiry_date ) {
+                                     const shelfLifeVal = card.querySelector('.item-shelf-life-mobile') ? card.querySelector('.item-shelf-life-mobile').value : '';
+                                     const isDirectExpiryMode = toggleExpiryInputAllSwitch ? toggleExpiryInputAllSwitch.checked : false;
+                                     const hasShelfLife = shelfLifeVal !== '' && !isNaN(parseInt(shelfLifeVal, 10)) && parseInt(shelfLifeVal, 10) >=0;
+                                     const expDateGroup = card.querySelector('.item-expiry-date-group-mobile');
+
+                                     if(expDateGroup && (isDirectExpiryMode || !hasShelfLife)){ 
+                                        if(!expDateGroup.classList.contains('hidden')){
+                                            expDateInput.value = itemFromRawData.expiry_date;
+                                        }
+                                     }
+                                }
+                            }
+                         }
+                         currentItemIndex++;
+                    });
                     
                     detailFormRendered = true; 
                      if(isMobileView()){ 
