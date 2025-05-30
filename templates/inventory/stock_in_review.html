@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}ตรวจสอบ Batch รับสินค้าเข้า - GoFresh StockPro{% endblock %}
+
+{% block head_extra %}
+<style>
+    .review-table th { white-space: nowrap; background-color: var(--hitech-surface-hover); }
+    .review-table td { vertical-align: middle; font-size: 0.9rem; }
+    .table-responsive { max-height: 65vh; } 
+    .summary-details dt { font-weight: 600; color: var(--hitech-text-secondary); padding-top: 0.3rem;}
+    .summary-details dd { margin-bottom: 0.3rem; }
+    .card-header h5 { color: var(--hitech-accent); }
+    .total-items-summary {font-size: 1.1rem; font-weight: bold;}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1><i class="bi bi-check2-circle me-2"></i>ตรวจสอบและยืนยัน Batch รับสินค้าเข้า</h1>
+<hr>
+
+{% include '_alert_messages.html' %}
+
+{% if batch_data and batch_data.items %}
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="mb-0">ข้อมูลสรุป Batch</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row summary-details mb-0">
+            <dt class="col-sm-3 col-lg-2">สถานที่จัดเก็บ:</dt>
+            <dd class="col-sm-9 col-lg-10">{{ location_name }} (ID: {{ batch_data.location_id }})</dd>
+
+            <dt class="col-sm-3 col-lg-2">หมายเหตุรวม Batch:</dt>
+            <dd class="col-sm-9 col-lg-10">{{ batch_data.batch_notes if batch_data.batch_notes and batch_data.batch_notes.strip() else '-' }}</dd>
+
+            <dt class="col-sm-3 col-lg-2">จำนวนประเภทสินค้า:</dt>
+            <dd class="col-sm-9 col-lg-10 total-items-summary">{{ batch_data.items | length }}</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">รายการสินค้าที่จะรับเข้า</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover review-table mb-0">
+                <thead class="sticky-top">
+                    <tr>
+                        <th class="text-center">#</th>
+                        <th>สินค้า (SKU)</th>
+                        <th class="text-end">จำนวน</th>
+                        <th class="text-end">ต้นทุน/หน่วย</th>
+                        <th class="text-center">วันผลิต</th>
+                        <th class="text-center">วันหมดอายุ</th>
+                        </tr>
+                </thead>
+                <tbody>
+                    {% for item in batch_data.items %}
+                    <tr>
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>
+                            {{ item.product_name | default('N/A') }}
+                            <small class="d-block text-muted">({{ item.product_sku | default('N/A') }})</small>
+                        </td>
+                        <td class="text-end fw-bold">{{ "%.2f"|format(item.quantity | float) }}</td>
+                        <td class="text-end">{{ "%.2f"|format(item.cost_per_unit | float) if item.cost_per_unit is not none else '-' }}</td>
+                        <td class="text-center">{{ item.production_date | thaidate if item.production_date else '-' }}</td>
+                        <td class="text-center">
+                            {% set final_expiry_date = item.expiry_date %}
+                            {% if not final_expiry_date and item.production_date and item.shelf_life_days is not none and item.shelf_life_days >= 0 %}
+                                {% set final_expiry_date = item.production_date + timedelta(days=item.shelf_life_days) %}
+                            {% endif %}
+                            
+                            {{ final_expiry_date | thaidate if final_expiry_date else '-' }}
+                            {% if not item.expiry_date and item.production_date and item.shelf_life_days is not none and item.shelf_life_days >= 0 %}
+                                <small class="text-info d-block">(คำนวณ)</small>
+                            {% endif %}
+                        </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 d-flex justify-content-between align-items-center flex-wrap form-actions-mobile-full-width">
+    <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}" class="btn btn-outline-secondary btn-lg mb-2 mb-md-0">
+        <i class="bi bi-pencil-square me-1"></i> แก้ไขรายการ
+    </a>
+    <form method="post" action="{{ request.app.url_path_for('ui_confirm_batch_stock_in') }}" class="d-inline">
+        <button type="submit" class="btn btn-success btn-lg px-5">
+            <i class="bi bi-check-all me-2"></i> ยืนยันและบันทึกข้อมูล Batch
+        </button>
+    </form>
+</div>
+
+{% else %}
+<div class="alert alert-warning" role="alert">
+    ไม่พบข้อมูล Batch สำหรับตรวจสอบ หรือ Session หมดอายุ กรุณา <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}" class="alert-link">เริ่มต้นทำรายการรับสินค้าเข้าใหม่</a>
+</div>
+{% endif %}
+
+{% endblock %}

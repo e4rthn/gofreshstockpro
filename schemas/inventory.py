@@ -1,40 +1,47 @@
-# schemas/inventory.py
+# gofresh_stockpro/schemas/inventory.py
 from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict, Any
+from typing import List, Optional, Dict, Any 
 from datetime import date
 
-# Schema สำหรับ Stock In (ปรับปรุง)
+# --- StockInSchema เดิม (อาจจะยังเก็บไว้ถ้ามีการใช้งานที่อื่น) ---
 class StockInSchema(BaseModel):
     product_id: int
     location_id: int
     quantity: float = Field(..., gt=0)
     cost_per_unit: Optional[float] = None
-    # --- เปลี่ยนจาก expiry_date เป็น production_date ---
-    production_date: Optional[date] = None # วันที่ผลิต (ถ้ามี)
-    # --- expiry_date กลายเป็น Optional (เผื่อกรอกตรง หรือไม่มี shelf life) ---
-    expiry_date: Optional[date] = None     # วันหมดอายุ (ถ้าต้องการกรอกโดยตรง)
-    # ---------------------------------------------------
+    production_date: Optional[date] = None
+    expiry_date: Optional[date] = None
     notes: Optional[str] = None
 
-    # การ validate ที่ซับซ้อนว่าต้องกรอก date อย่างน้อย 1 อย่าง (ขึ้นกับ shelf life)
-    # ควรทำใน service layer เพื่อให้เข้าถึงข้อมูล product ได้
-    # @validator('expiry_date', always=True)
-    # def check_expiry_or_production_date(cls, v, values):
-    #     production_date = values.get('production_date')
-    #     # if not production_date and not v:
-    #     #     raise ValueError('ต้องระบุ Production Date หรือ Expiry Date อย่างใดอย่างหนึ่ง')
-    #     return v
+# --- Schemas ใหม่สำหรับ Batch Stock-In ---
+class StockInItemDetailSchema(BaseModel):
+    product_id: int
+    quantity: float = Field(..., gt=0)
+    cost_per_unit: Optional[float] = Field(None, ge=0)
+    production_date: Optional[date] = None
+    expiry_date: Optional[date] = None # สามารถกรอกโดยตรง หรือคำนวณจาก production_date + shelf_life
+    notes: Optional[str] = None
+    
+    # Optional fields for client-side display convenience (ไม่จำเป็นต้องส่งไป backend ทั้งหมด)
+    # These might be populated by JS when building the review page or batch list
+    product_name: Optional[str] = None 
+    product_sku: Optional[str] = None
+    shelf_life_days: Optional[int] = None 
 
+class BatchStockInSchema(BaseModel):
+    location_id: int = Field(...)
+    items: List[StockInItemDetailSchema] = Field(..., min_length=1)
+    batch_notes: Optional[str] = None # หมายเหตุรวมสำหรับ Batch นี้ (ถ้ามี)
 
-# Schema สำหรับ Stock Adjustment (เหมือนเดิม)
+# --- StockAdjustmentSchema (เหมือนเดิม) ---
 class StockAdjustmentSchema(BaseModel):
     product_id: int
     location_id: int
-    quantity_change: float = Field(...) # เช็ค not-zero ใน route/service
+    quantity_change: float = Field(...) 
     reason: Optional[str] = None
     notes: Optional[str] = None
 
-# Schema สำหรับ Stock Transfer (เหมือนเดิม)
+# --- StockTransferSchema (เหมือนเดิม) ---
 class StockTransferSchema(BaseModel):
     product_id: int
     from_location_id: int

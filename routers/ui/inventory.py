@@ -3,21 +3,21 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, Qu
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, timedelta, datetime, time
+from datetime import date, timedelta, datetime, time # Ensure datetime is imported
 from urllib.parse import urlencode as python_urlencode
 import math
+import json # For session data
 
-import schemas
+import schemas # Import the main schemas module
+from schemas.inventory import BatchStockInSchema, StockInItemDetailSchema # Specific schemas
 import models
-from models import TransactionType
+from models import TransactionType # Ensure TransactionType is imported
 from services import inventory_service, product_service, category_service, location_service
 from database import get_db
 
-# *** Import time formatting helpers from utils.py ***
 try:
-    from utils import format_thai_datetime, format_thai_date # <<< แก้ไขตรงนี้
+    from utils import format_thai_datetime, format_thai_date 
 except ImportError:
-    # Fallback functions (ควรจะลบออกถ้ามั่นใจว่า utils.py import ได้)
     def format_thai_datetime(value, format_str="%d/%m/%Y %H:%M"): return str(value) if value else '-'
     def format_thai_date(value, format_str="%d/%m/%Y"): return str(value) if value else '-'
     print("Warning: Could not import time formatting functions from utils.py. Using fallback.")
@@ -28,7 +28,7 @@ ui_router = APIRouter(
     include_in_schema=False
 )
 
-# --- ui_view_inventory_summary (เหมือนเดิมจากที่คุณให้มาล่าสุด) ---
+# --- ui_view_inventory_summary (No changes from previous versions you provided) ---
 @ui_router.get("/summary/", response_class=HTMLResponse, name="ui_view_inventory_summary")
 async def ui_view_inventory_summary(
     request: Request, page: int = Query(1, ge=1), limit: int = Query(15, ge=1),
@@ -77,124 +77,198 @@ async def ui_view_inventory_summary(
     }
     return templates.TemplateResponse("inventory/summary.html", context)
 
-# --- ui_show_stock_in_form (แก้ไขแล้วสำหรับ SKU input + Category Card) ---
+
+# --- Batch Stock-In Routes (New and Modified) ---
 @ui_router.get("/stock-in", response_class=HTMLResponse, name="ui_show_stock_in_form")
 async def ui_show_stock_in_form(request: Request, db: Session = Depends(get_db)):
     templates = request.app.state.templates
     if templates is None: raise HTTPException(status_code=500, detail="Templates not configured")
-    locations_data = location_service.get_locations(db=db, limit=1000); locations = locations_data.get("items", [])
-    categories_data = category_service.get_categories(db=db, limit=1000); categories = categories_data.get("items", [])
-
-    # Try to get form_data and error from session if using PRG pattern
-    # Otherwise, they will be None, which is fine for the first load
-    form_data = request.session.pop("form_data", None) if hasattr(request, "session") else None
-    error_message = request.session.pop("error_message", None) if hasattr(request, "session") else None
-
+    
+    locations_data = location_service.get_locations(db=db, limit=1000)
+    categories_data = category_service.get_categories(db=db, limit=1000)
+    
+    form_data_raw_json = request.session.pop("stock_in_form_data_raw", None)
+    error_message = request.session.pop("stock_in_error_message", None)
+    
+    form_data_raw = None
+    if form_data_raw_json:
+        try:
+            form_data_raw = json.loads(form_data_raw_json)
+        except json.JSONDecodeError:
+            print("Warning: Could not decode stock_in_form_data_raw from session.")
+            form_data_raw = None # Ensure it's None if decode fails
 
     return templates.TemplateResponse(
-        "inventory/stock_in.html",
+        "inventory/stock_in.html", # This template is now designed for batch stock-in
         {
             "request": request,
-            "locations": locations,
-            "categories": categories,
-            "form_data": form_data,
-            "error": error_message
+            "locations": locations_data.get("items", []),
+            "categories": categories_data.get("items", []),
+            "error": error_message or request.query_params.get('error'),
+            "message": request.query_params.get('message'),
+            "form_data_raw": form_data_raw 
         }
     )
 
-# --- ui_handle_stock_in_form (แก้ไขแล้วสำหรับ SKU input + Category Card) ---
-@ui_router.post("/stock-in", response_class=HTMLResponse, name="ui_handle_stock_in_form")
-async def ui_handle_stock_in_form(
-    request: Request, db: Session = Depends(get_db),
-    product_id: int = Form(...),
-    location_id: int = Form(...),
-    quantity: float = Form(...),
-    sku_barcode_display_only: Optional[str] = Form(None),
-    category_id_for_reload: Optional[str] = Form(None), # For re-rendering category dropdown
-    product_shelf_life: Optional[str] = Form(None),
-    cost_per_unit_str: Optional[str] = Form(None, alias="cost_per_unit"),
-    production_date_str: Optional[str] = Form(None, alias="production_date"),
-    expiry_date_str: Optional[str] = Form(None, alias="expiry_date"),
-    notes: Optional[str] = Form(None)
+@ui_router.post("/stock-in/process-details", name="ui_process_stock_in_details_for_review")
+async def ui_process_stock_in_details_for_review(
+    request: Request, 
+    db: Session = Depends(get_db) 
 ):
+    form_data_dict = await request.form() 
+    form_data = dict(form_data_dict) # Convert FormData to a regular dict for easier processing
+
+    parsed_items: List[StockInItemDetailSchema] = []
+    
+    try:
+        location_id_str = form_data.get("location_id")
+        if not location_id_str or not location_id_str.strip().isdigit():
+            raise ValueError("กรุณาเลือกสถานที่จัดเก็บที่ถูกต้อง")
+        location_id = int(location_id_str)
+        
+        batch_notes_val = form_data.get("batch_notes")
+
+        item_count = 0
+        # Loop based on presence of items[INDEX][product_id]
+        while True:
+            prod_id_form_key = f"items[{item_count}][product_id]"
+            if prod_id_form_key not in form_data:
+                break 
+            
+            prod_id_str = form_data.get(prod_id_form_key)
+            qty_str = form_data.get(f"items[{item_count}][quantity]")
+
+            if not prod_id_str or not prod_id_str.strip().isdigit() or \
+               not qty_str or not qty_str.strip(): # Basic check
+                item_count += 1
+                print(f"Skipping malformed item at index {item_count-1}")
+                continue 
+
+            product_id = int(prod_id_str)
+            try:
+                quantity = float(qty_str)
+                if quantity <= 0:
+                    raise ValueError("จำนวนต้องมากกว่า 0")
+            except ValueError:
+                 raise ValueError(f"รูปแบบจำนวนไม่ถูกต้องสำหรับสินค้า ID {product_id}")
+
+
+            product_details = product_service.get_product(db, product_id=product_id)
+            if not product_details:
+                raise ValueError(f"ไม่พบข้อมูลสินค้าสำหรับ ID: {product_id}")
+
+            cost_str = form_data.get(f"items[{item_count}][cost_per_unit]")
+            prod_date_str = form_data.get(f"items[{item_count}][production_date]")
+            exp_date_str = form_data.get(f"items[{item_count}][expiry_date]")
+            # item_notes_str = form_data.get(f"items[{item_count}][notes]") # Notes per item removed based on user feedback
+
+            item_schema_data = {
+                "product_id": product_id,
+                "quantity": quantity,
+                "cost_per_unit": float(cost_str) if cost_str and cost_str.strip() else None,
+                "production_date": date.fromisoformat(prod_date_str) if prod_date_str and prod_date_str.strip() else None,
+                "expiry_date": date.fromisoformat(exp_date_str) if exp_date_str and exp_date_str.strip() else None,
+                "notes": None, # Individual item notes removed
+                "product_name": product_details.name,
+                "product_sku": product_details.sku,
+                "shelf_life_days": product_details.shelf_life_days
+            }
+            # Validate with Pydantic before adding
+            item_schema = StockInItemDetailSchema(**item_schema_data)
+            parsed_items.append(item_schema)
+            item_count += 1
+        
+        if not parsed_items:
+            raise ValueError("ไม่มีรายการสินค้าสำหรับการรับเข้า กรุณาเพิ่มสินค้าและกรอกรายละเอียด")
+
+        batch_schema_for_session = BatchStockInSchema(
+            location_id=location_id,
+            items=parsed_items,
+            batch_notes=batch_notes_val
+        )
+        request.session["batch_stock_in_data"] = batch_schema_for_session.model_dump(mode='json')
+        
+        return RedirectResponse(url=request.app.url_path_for('ui_show_stock_in_review_page'), status_code=status.HTTP_303_SEE_OTHER)
+
+    except ValueError as ve:
+        request.session["stock_in_error_message"] = str(ve)
+        request.session["stock_in_form_data_raw"] = json.dumps(form_data) # Store original form_data
+        return RedirectResponse(url=request.app.url_path_for('ui_show_stock_in_form'), status_code=status.HTTP_303_SEE_OTHER)
+    except Exception as ex:
+        print(f"Error processing stock-in details: {type(ex).__name__} - {ex}")
+        request.session["stock_in_error_message"] = "เกิดข้อผิดพลาดในการประมวลผลข้อมูล โปรดลองอีกครั้ง"
+        request.session["stock_in_form_data_raw"] = json.dumps(form_data)
+        return RedirectResponse(url=request.app.url_path_for('ui_show_stock_in_form'), status_code=status.HTTP_303_SEE_OTHER)
+
+
+@ui_router.get("/stock-in/review", response_class=HTMLResponse, name="ui_show_stock_in_review_page")
+async def ui_show_stock_in_review_page(request: Request, db: Session = Depends(get_db)):
     templates = request.app.state.templates
     if templates is None: raise HTTPException(status_code=500, detail="Templates not configured")
 
-    form_data_for_rerender = {
-        "product_id": product_id, "location_id": location_id, "quantity": quantity,
-        "cost_per_unit": cost_per_unit_str, "production_date": production_date_str,
-        "expiry_date": expiry_date_str, "notes": notes,
-        "sku_barcode_display_only": sku_barcode_display_only,
-        "product_shelf_life": product_shelf_life,
-        "category_id_for_reload": category_id_for_reload
-    }
+    batch_data_dict_from_session = request.session.get("batch_stock_in_data")
+    if not batch_data_dict_from_session:
+        error_query_params = python_urlencode({"error": "ไม่พบข้อมูล Batch สำหรับตรวจสอบ กรุณาเริ่มต้นใหม่"})
+        return RedirectResponse(url=f"{request.app.url_path_for('ui_show_stock_in_form')}?{error_query_params}", status_code=status.HTTP_303_SEE_OTHER)
+    
+    try:
+        # Reconstruct the Pydantic model from the dictionary stored in session
+        batch_data_for_template = BatchStockInSchema.model_validate(batch_data_dict_from_session)
+        
+        location_obj = location_service.get_location(db, location_id=batch_data_for_template.location_id)
+        location_name_for_display = location_obj.name if location_obj else f"ID: {batch_data_for_template.location_id}"
 
-    cost_per_unit_float: Optional[float] = None
-    production_date_obj: Optional[date] = None
-    expiry_date_obj: Optional[date] = None
-    error_msg: Optional[str] = None
+    except Exception as e: 
+        print(f"Error validating batch data from session for review: {type(e).__name__} - {e}")
+        request.session.pop("batch_stock_in_data", None) 
+        error_query_params = python_urlencode({"error": "ข้อมูล Batch ใน Session ไม่ถูกต้อง กรุณาเริ่มต้นใหม่"})
+        return RedirectResponse(url=f"{request.app.url_path_for('ui_show_stock_in_form')}?{error_query_params}", status_code=status.HTTP_303_SEE_OTHER)
 
-    if not product_id: # This check should ideally be more robust, e.g., if JS fails
-        error_msg = "ไม่พบรหัสสินค้า กรุณาค้นหาด้วย SKU/Barcode หรือเลือกจากรายการสินค้า"
+    return templates.TemplateResponse(
+        "inventory/stock_in_review.html", # New template for review page
+        {
+            "request": request,
+            "batch_data": batch_data_for_template, 
+            "location_name": location_name_for_display,
+            "error": request.query_params.get('error'), 
+            "message": request.query_params.get('message'),
+            "timedelta": timedelta # Pass timedelta for date calculations in template
+        }
+    )
 
-    if not error_msg and cost_per_unit_str is not None and cost_per_unit_str.strip() != "":
-        try:
-            cost_per_unit_float = float(cost_per_unit_str)
-            if cost_per_unit_float < 0: raise ValueError("ต้นทุนต่อหน่วยต้องไม่ติดลบ")
-        except ValueError: error_msg = "รูปแบบต้นทุนต่อหน่วยไม่ถูกต้อง"
-    if not error_msg and production_date_str and production_date_str.strip():
-        try: production_date_obj = date.fromisoformat(production_date_str)
-        except ValueError: error_msg = "รูปแบบวันที่ผลิตไม่ถูกต้อง (YYYY-MM-DD)"
-    if not error_msg and expiry_date_str and expiry_date_str.strip():
-        try: expiry_date_obj = date.fromisoformat(expiry_date_str)
-        except ValueError: error_msg = "รูปแบบวันที่หมดอายุไม่ถูกต้อง (YYYY-MM-DD)"
-
-    if error_msg:
-        locations_data = location_service.get_locations(db=db, limit=1000); locations = locations_data.get("items", [])
-        categories_data = category_service.get_categories(db=db, limit=1000); categories = categories_data.get("items", [])
-        # If using PRG, store in session and redirect:
-        # if hasattr(request, "session"):
-        #     request.session["form_data"] = form_data_for_rerender
-        #     request.session["error_message"] = error_msg
-        # return RedirectResponse(url=request.app.url_path_for('ui_show_stock_in_form'), status_code=status.HTTP_303_SEE_OTHER)
-        # Else, render directly (as per current structure)
-        return templates.TemplateResponse(
-            "inventory/stock_in.html", {
-                "request": request, "locations": locations, "categories": categories,
-                "error": error_msg, "form_data": form_data_for_rerender
-            }, status_code=status.HTTP_400_BAD_REQUEST)
+@ui_router.post("/stock-in/confirm", name="ui_confirm_batch_stock_in")
+async def ui_confirm_batch_stock_in(request: Request, db: Session = Depends(get_db)):
+    batch_data_dict = request.session.pop("batch_stock_in_data", None) 
+    if not batch_data_dict:
+        error_query_params = python_urlencode({"error": "ไม่พบข้อมูล Batch ที่จะบันทึก กรุณาเริ่มต้นใหม่"})
+        return RedirectResponse(url=f"{request.app.url_path_for('ui_show_stock_in_form')}?{error_query_params}", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
-         stock_in_data = schemas.StockInSchema(
-             product_id=product_id, location_id=location_id, quantity=quantity,
-             cost_per_unit=cost_per_unit_float, production_date=production_date_obj,
-             expiry_date=expiry_date_obj, notes=notes
-         )
-         inventory_service.record_stock_in(db=db, stock_in_data=stock_in_data)
-         success_message = f"บันทึกการรับสินค้าเข้า (รหัสสินค้า: {product_id}, จำนวน: {quantity}) เรียบร้อยแล้ว"
-         redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
-         query_params = python_urlencode({"message": success_message})
-         redirect_url = f"{redirect_url_path}?{query_params}" if query_params else redirect_url_path
-         return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
-    except ValueError as e: # Specific errors from service layer
-         locations_data = location_service.get_locations(db=db, limit=1000); locations = locations_data.get("items", [])
-         categories_data = category_service.get_categories(db=db, limit=1000); categories = categories_data.get("items", [])
-         return templates.TemplateResponse(
-             "inventory/stock_in.html", {
-                 "request": request, "locations": locations, "categories": categories,
-                 "error": str(e), "form_data": form_data_for_rerender
-             }, status_code=status.HTTP_400_BAD_REQUEST)
-    except Exception as e: # Catch any other unexpected errors
-         locations_data = location_service.get_locations(db=db, limit=1000); locations = locations_data.get("items", [])
-         categories_data = category_service.get_categories(db=db, limit=1000); categories = categories_data.get("items", [])
-         print(f"Unexpected stock-in form error: {type(e).__name__} - {e}")
-         return templates.TemplateResponse(
-             "inventory/stock_in.html", {
-                 "request": request, "locations": locations, "categories": categories,
-                 "error": "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะบันทึกสต็อกเข้า", "form_data": form_data_for_rerender
-             }, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        batch_stock_in_data = BatchStockInSchema.model_validate(batch_data_dict)
+        # The service function record_batch_stock_in prepares transactions but doesn't commit.
+        inventory_service.record_batch_stock_in(db=db, batch_data=batch_stock_in_data)
+        db.commit() # Commit all prepared changes here
+        success_message = f"บันทึกการรับสินค้าเข้า Batch (จำนวน {len(batch_stock_in_data.items)} ประเภทสินค้า) เรียบร้อยแล้ว"
+        redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
+        query_params = python_urlencode({"message": success_message})
+        return RedirectResponse(url=f"{redirect_url_path}?{query_params}", status_code=status.HTTP_303_SEE_OTHER)
+    
+    except ValueError as e:
+        db.rollback()
+        request.session["batch_stock_in_data"] = batch_data_dict # Put data back for retry
+        error_query_params = python_urlencode({"error": str(e)})
+        review_page_url = str(request.app.url_path_for('ui_show_stock_in_review_page'))
+        return RedirectResponse(url=f"{review_page_url}?{error_query_params}", status_code=status.HTTP_303_SEE_OTHER)
+    except Exception as e:
+        db.rollback()
+        request.session["batch_stock_in_data"] = batch_data_dict 
+        print(f"Unexpected error confirming batch stock-in: {type(e).__name__} - {e}")
+        error_query_params = python_urlencode({"error": "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะบันทึก Batch สต็อกเข้า"})
+        review_page_url = str(request.app.url_path_for('ui_show_stock_in_review_page'))
+        return RedirectResponse(url=f"{review_page_url}?{error_query_params}", status_code=status.HTTP_303_SEE_OTHER)
 
-# --- Adjustment Routes ---
+
+# --- Adjustment Routes (No changes from previous versions you provided) ---
 @ui_router.get("/adjust/", response_class=HTMLResponse, name="ui_show_adjustment_form")
 async def ui_show_adjustment_form(request: Request, db: Session = Depends(get_db)):
     templates = request.app.state.templates
@@ -209,7 +283,7 @@ async def ui_show_adjustment_form(request: Request, db: Session = Depends(get_db
 @ui_router.post("/adjust/", response_class=HTMLResponse, name="ui_handle_adjustment_form")
 async def ui_handle_adjustment_form(
     request: Request, db: Session = Depends(get_db), product_id: int = Form(...), location_id: int = Form(...),
-    quantity_change: int = Form(...), reason: Optional[str] = Form(None), notes: Optional[str] = Form(None),
+    quantity_change: float = Form(...), reason: Optional[str] = Form(None), notes: Optional[str] = Form(None),
     sku_barcode_display_only: Optional[str] = Form(None), category_id_for_reload: Optional[str] = Form(None)
 ):
     templates = request.app.state.templates
@@ -218,64 +292,42 @@ async def ui_handle_adjustment_form(
                       "reason": reason, "notes": notes, "sku_barcode_display_only": sku_barcode_display_only,
                       "category_id_for_reload": category_id_for_reload}
     adjustment_reasons = [ "สินค้าเสียหาย", "สินค้าหมดอายุ", "แก้ไขยอดจากการนับสต็อก - เพิ่ม", "แก้ไขยอดจากการนับสต็อก - ลด", "ใช้ภายใน", "ส่งคืนผู้ขาย", "อื่นๆ" ]
-    common_error_context = {"request": request,
+    common_context = {"request": request,
                             "locations": location_service.get_locations(db=db, limit=1000).get("items", []),
                             "categories": category_service.get_categories(db=db, limit=1000).get("items", []),
                             "reasons": adjustment_reasons, "form_data": form_data_dict}
     if not product_id:
-        common_error_context["error"] = "ไม่พบรหัสสินค้า กรุณาค้นหาหรือเลือกสินค้าอีกครั้ง"
-        return templates.TemplateResponse("inventory/adjustment.html", common_error_context, status_code=status.HTTP_400_BAD_REQUEST)
+        common_context["error"] = "ไม่พบรหัสสินค้า กรุณาค้นหาหรือเลือกสินค้าอีกครั้ง"
+        return templates.TemplateResponse("inventory/adjustment.html", common_context, status_code=status.HTTP_400_BAD_REQUEST)
     if quantity_change == 0:
-         common_error_context["error"] = "จำนวนที่เปลี่ยนแปลงต้องไม่เป็นศูนย์"
-         return templates.TemplateResponse("inventory/adjustment.html", common_error_context, status_code=status.HTTP_400_BAD_REQUEST)
+         common_context["error"] = "จำนวนที่เปลี่ยนแปลงต้องไม่เป็นศูนย์"
+         return templates.TemplateResponse("inventory/adjustment.html", common_context, status_code=status.HTTP_400_BAD_REQUEST)
     try:
-        schema_data = {k: v for k, v in form_data_dict.items() if k in schemas.StockAdjustmentSchema.model_fields}
-        adjustment_data_schema = schemas.StockAdjustmentSchema(**schema_data)
+        schema_data = {
+            "product_id": product_id,
+            "location_id": location_id,
+            "quantity_change": quantity_change,
+            "reason": reason,
+            "notes": notes
+        }
+        adjustment_data_schema = schemas.StockAdjustmentSchema(**schema_data) #
         inventory_service.record_stock_adjustment(db=db, adjustment_data=adjustment_data_schema)
+        db.commit() 
         success_message = f"บันทึกการปรับปรุงสต็อก (สินค้า ID: {product_id}, สถานที่ ID: {location_id}, จำนวน: {quantity_change:+}) เรียบร้อยแล้ว"
         redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
         query_params = python_urlencode({"message": success_message})
         return RedirectResponse(url=f"{redirect_url_path}?{query_params}" if query_params else redirect_url_path, status_code=status.HTTP_303_SEE_OTHER)
     except ValueError as e:
-         common_error_context["error"] = str(e)
-         return templates.TemplateResponse("inventory/adjustment.html", common_error_context, status_code=status.HTTP_400_BAD_REQUEST)
+         db.rollback()
+         common_context["error"] = str(e)
+         return templates.TemplateResponse("inventory/adjustment.html", common_context, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
+         db.rollback()
          print(f"Unexpected adjustment form error: {type(e).__name__} - {e}")
-         common_error_context["error"] = "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะบันทึกการปรับปรุงสต็อก"
-         return templates.TemplateResponse("inventory/adjustment.html", common_error_context, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+         common_context["error"] = "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะบันทึกการปรับปรุงสต็อก"
+         return templates.TemplateResponse("inventory/adjustment.html", common_context, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# --- Near Expiry Report ---
-@ui_router.get("/near-expiry/", response_class=HTMLResponse, name="ui_near_expiry_report")
-async def ui_near_expiry_report(
-    request: Request, db: Session = Depends(get_db),
-    days_ahead: int = Query(30, ge=1), page: int = Query(1, ge=1), limit: int = Query(15, ge=1)
-):
-    templates = request.app.state.templates
-    if templates is None: raise HTTPException(status_code=500, detail="Templates not configured")
-    skip = (page - 1) * limit; skip = max(0, skip)
-    report_data = inventory_service.get_near_expiry_transactions(db, days_ahead=days_ahead, skip=skip, limit=limit)
-    transactions_orm = report_data.get("transactions", [])
-    total_count = report_data.get("total_count", 0)
-    total_pages = math.ceil(total_count / limit) if limit > 0 else 0
-    today_date_obj = date.today()
-    formatted_transactions = []
-    for tx_orm in transactions_orm:
-        try:
-            tx_dict = {"id": tx_orm.id, "quantity_change": tx_orm.quantity_change, "cost_per_unit": tx_orm.cost_per_unit,
-                       "notes": tx_orm.notes, 'product_name': tx_orm.product.name if tx_orm.product else 'N/A',
-                       'product_sku': tx_orm.product.sku if tx_orm.product else 'N/A',
-                       'location_name': tx_orm.location.name if tx_orm.location else 'N/A',
-                       'shelf_life_days': tx_orm.product.shelf_life_days if tx_orm.product and tx_orm.product.shelf_life_days is not None else '-',
-                       'expiry_date_formatted': format_thai_date(tx_orm.expiry_date, format_str="%d/%m/%Y"),
-                       'transaction_date_formatted': format_thai_datetime(tx_orm.transaction_date, format_str='%d/%m/%y %H:%M'),
-                       'days_left': (tx_orm.expiry_date - today_date_obj).days if tx_orm.expiry_date else -1}
-            formatted_transactions.append(tx_dict)
-        except Exception as format_err: print(f"Error processing near-expiry transaction {getattr(tx_orm, 'id', 'N/A')}: {format_err}")
-    context = {"request": request, "transactions": formatted_transactions, "days_ahead": days_ahead, "page": page,
-               "limit": limit, "total_count": total_count, "total_pages": total_pages, "today": today_date_obj, "skip": skip}
-    return templates.TemplateResponse("reports/near_expiry.html", context)
-
-# --- Transfer Routes ---
+# --- Transfer Routes (No changes from previous versions you provided) ---
 @ui_router.get("/transfer/", response_class=HTMLResponse, name="ui_show_transfer_form")
 async def ui_show_transfer_form(request: Request, db: Session = Depends(get_db)):
     templates = request.app.state.templates
@@ -288,7 +340,7 @@ async def ui_show_transfer_form(request: Request, db: Session = Depends(get_db))
 async def ui_handle_transfer_form(
     request: Request, db: Session = Depends(get_db), product_id: int = Form(...),
     from_location_id: int = Form(...), to_location_id: int = Form(...),
-    quantity: float = Form(...), notes: Optional[str] = Form(None),
+    quantity: float = Form(...), notes: Optional[str] = Form(None), 
     sku_barcode_display_only: Optional[str] = Form(None), category_id_for_reload: Optional[str] = Form(None)
 ):
     templates = request.app.state.templates
@@ -296,32 +348,41 @@ async def ui_handle_transfer_form(
     form_data_dict = {"product_id": product_id, "from_location_id": from_location_id, "to_location_id": to_location_id,
                       "quantity": quantity, "notes": notes, "sku_barcode_display_only": sku_barcode_display_only,
                       "category_id_for_reload": category_id_for_reload}
-    common_error_context = {"request": request, "locations": location_service.get_locations(db=db, limit=1000).get("items", []),
+    common_context = {"request": request, "locations": location_service.get_locations(db=db, limit=1000).get("items", []),
                             "categories": category_service.get_categories(db=db, limit=1000).get("items", []),
                             "form_data": form_data_dict}
     if not product_id:
-        common_error_context["error"] = "ไม่พบรหัสสินค้า กรุณาค้นหาหรือเลือกสินค้าอีกครั้ง"
-        return templates.TemplateResponse("inventory/transfer.html", common_error_context, status_code=status.HTTP_400_BAD_REQUEST)
+        common_context["error"] = "ไม่พบรหัสสินค้า กรุณาค้นหาหรือเลือกสินค้าอีกครั้ง"
+        return templates.TemplateResponse("inventory/transfer.html", common_context, status_code=status.HTTP_400_BAD_REQUEST)
     if from_location_id == to_location_id:
-        common_error_context["error"] = "สถานที่จัดเก็บต้นทางและปลายทางต้องแตกต่างกัน"
-        return templates.TemplateResponse("inventory/transfer.html", common_error_context, status_code=status.HTTP_400_BAD_REQUEST)
+        common_context["error"] = "สถานที่จัดเก็บต้นทางและปลายทางต้องแตกต่างกัน"
+        return templates.TemplateResponse("inventory/transfer.html", common_context, status_code=status.HTTP_400_BAD_REQUEST)
     try:
-        schema_data = {k:v for k,v in form_data_dict.items() if k in schemas.StockTransferSchema.model_fields}
-        transfer_data_schema = schemas.StockTransferSchema(**schema_data)
+        schema_data = {
+            "product_id": product_id,
+            "from_location_id": from_location_id,
+            "to_location_id": to_location_id,
+            "quantity": quantity,
+            "notes": notes
+        }
+        transfer_data_schema = schemas.StockTransferSchema(**schema_data) #
         inventory_service.record_stock_transfer(db=db, transfer_data=transfer_data_schema)
+        db.commit() 
         success_message = f"โอนย้ายสินค้า ID {product_id} จำนวน {quantity} จากสถานที่ ID {from_location_id} ไปยัง ID {to_location_id} เรียบร้อยแล้ว"
         redirect_url_path = str(request.app.url_path_for('ui_view_inventory_summary'))
         query_params = python_urlencode({"message": success_message})
         return RedirectResponse(url=f"{redirect_url_path}?{query_params}" if query_params else redirect_url_path, status_code=status.HTTP_303_SEE_OTHER)
     except ValueError as e:
-         common_error_context["error"] = str(e)
-         return templates.TemplateResponse("inventory/transfer.html", common_error_context, status_code=status.HTTP_400_BAD_REQUEST)
+         db.rollback()
+         common_context["error"] = str(e)
+         return templates.TemplateResponse("inventory/transfer.html", common_context, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
+         db.rollback()
          print(f"Unexpected transfer form error: {type(e).__name__} - {e}")
-         common_error_context["error"] = "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะบันทึกการโอนย้าย"
-         return templates.TemplateResponse("inventory/transfer.html", common_error_context, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+         common_context["error"] = "เกิดข้อผิดพลาดที่ไม่คาดคิดขณะบันทึกการโอนย้าย"
+         return templates.TemplateResponse("inventory/transfer.html", common_context, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# --- Transaction Log Page Route ---
+# --- Transaction Log Page Route (No changes from previous versions you provided) ---
 @ui_router.get("/transactions/", response_class=HTMLResponse, name="ui_view_all_transactions")
 async def ui_view_all_transactions(
     request: Request, page: int = Query(1, ge=1), limit: int = Query(30, ge=1, le=200),
@@ -344,10 +405,10 @@ async def ui_view_all_transactions(
     except ValueError: parse_error = (f"{parse_error}; " if parse_error else "") + f"รูปแบบวันที่สิ้นสุดไม่ถูกต้อง: '{end_date_str}'"
 
     context = {"request": request, "transactions": [], "page": page, "limit": limit, "total_count": 0, "total_pages": 0, "skip": skip,
-               "all_products": [], "all_locations": [], "all_transaction_types": TransactionType,
+               "all_products": [], "all_locations": [], "all_transaction_types": TransactionType, 
                "selected_product_id": product_id, "selected_location_id": location_id, "selected_type": type_str,
                "start_date": start_date_str or "", "end_date": end_date_str or "", "error": parse_error,
-               "message": request.query_params.get('message'), "models": models}
+               "message": request.query_params.get('message'), "models": models, "timedelta": timedelta} # Pass timedelta
     try: context["all_products"] = product_service.get_products(db, limit=10000).get("items", [])
     except Exception as e: print(f"Error fetching products for filter: {e}")
     try: context["all_locations"] = location_service.get_locations(db, limit=1000).get("items", [])
@@ -382,3 +443,35 @@ async def ui_view_all_transactions(
             print(f"Error fetching inventory transactions: {e}")
             context["error"] = f"เกิดข้อผิดพลาดในการดึงข้อมูล: {e}"
     return templates.TemplateResponse("inventory/transactions_list.html", context)
+
+# --- Near Expiry Report (No changes from previous versions you provided) ---
+@ui_router.get("/near-expiry/", response_class=HTMLResponse, name="ui_near_expiry_report")
+async def ui_near_expiry_report(
+    request: Request, db: Session = Depends(get_db),
+    days_ahead: int = Query(30, ge=1), page: int = Query(1, ge=1), limit: int = Query(15, ge=1)
+):
+    templates = request.app.state.templates
+    if templates is None: raise HTTPException(status_code=500, detail="Templates not configured")
+    skip = (page - 1) * limit; skip = max(0, skip)
+    report_data = inventory_service.get_near_expiry_transactions(db, days_ahead=days_ahead, skip=skip, limit=limit)
+    transactions_orm = report_data.get("transactions", [])
+    total_count = report_data.get("total_count", 0)
+    total_pages = math.ceil(total_count / limit) if limit > 0 else 0
+    today_date_obj = date.today()
+    formatted_transactions = []
+    for tx_orm in transactions_orm:
+        try:
+            tx_dict = {"id": tx_orm.id, "quantity_change": tx_orm.quantity_change, "cost_per_unit": tx_orm.cost_per_unit,
+                       "notes": tx_orm.notes, 'product_name': tx_orm.product.name if tx_orm.product else 'N/A',
+                       'product_sku': tx_orm.product.sku if tx_orm.product else 'N/A',
+                       'location_name': tx_orm.location.name if tx_orm.location else 'N/A',
+                       'shelf_life_days': tx_orm.product.shelf_life_days if tx_orm.product and tx_orm.product.shelf_life_days is not None else '-',
+                       'expiry_date_formatted': format_thai_date(tx_orm.expiry_date, format_str="%d/%m/%Y"),
+                       'transaction_date_formatted': format_thai_datetime(tx_orm.transaction_date, format_str='%d/%m/%y %H:%M'),
+                       'days_left': (tx_orm.expiry_date - today_date_obj).days if tx_orm.expiry_date else -1}
+            formatted_transactions.append(tx_dict)
+        except Exception as format_err: print(f"Error processing near-expiry transaction {getattr(tx_orm, 'id', 'N/A')}: {format_err}")
+    context = {"request": request, "transactions": formatted_transactions, "days_ahead": days_ahead, "page": page,
+               "limit": limit, "total_count": total_count, "total_pages": total_pages, "today": today_date_obj, "skip": skip,
+               "timedelta": timedelta} # Pass timedelta
+    return templates.TemplateResponse("reports/near_expiry.html", context)

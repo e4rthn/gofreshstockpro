@@ -60,8 +60,7 @@
 <div class="card mb-4">
      <div class="card-header">เพิ่มสินค้าเข้ารอบนับ</div>
      <div class="card-body">
-         {# --- This form needs to be adapted for combined SKU + Category/Card selection similar to stock_in.html if desired --- #}
-         {# --- For now, keeping the previous Category > Product dropdown logic, but it can be upgraded --- #}
+         {# ฟอร์มเดิมสำหรับเพิ่มสินค้าทีละรายการ #}
          <form id="add-item-form" method="post" action="{{ request.app.url_path_for('ui_handle_add_item_to_session', session_id=session.id) }}" class="row g-2 align-items-end">
              <div class="col-md-4 form-floating">
                  <select class="form-select" id="category_select_count" aria-label="เลือกหมวดหมู่">
@@ -78,6 +77,19 @@
              </div>
              <div class="col-md-2"> <button type="submit" class="btn btn-primary btn-sm w-100">เพิ่มสินค้า</button> </div>
          </form>
+
+         {# --- เพิ่มส่วนนี้ --- #}
+         {% if session.location and session.location.name %}
+         <div class="mt-3 pt-3 border-top">
+             <form method="post" action="{{ request.app.url_path_for('ui_handle_add_all_items_from_location', session_id=session.id) }}" 
+                   onsubmit="return confirm('คุณต้องการเพิ่มสินค้าทั้งหมดที่เคยมีสต็อกใน {{ session.location.name }} เข้ารอบนับนี้หรือไม่? (สินค้าที่มีอยู่แล้วจะถูกข้าม)');">
+                 <button type="submit" class="btn btn-outline-info btn-sm w-100">
+                     <i class="bi bi-journal-plus me-1"></i> เพิ่มสินค้าทั้งหมดจาก {{ session.location.name }}
+                 </button>
+             </form>
+         </div>
+         {% endif %}
+         {# --- สิ้นสุดส่วนที่เพิ่ม --- #}
      </div>
  </div>
  {% endif %}

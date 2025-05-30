@@ -8,7 +8,13 @@ from .inventory_transaction import (
     InventoryTransactionBase,
     InventoryTransactionCreate
 )
-from .inventory import StockInSchema, StockAdjustmentSchema, StockTransferSchema
+from .inventory import ( # แก้ไขส่วนนี้
+    StockInSchema, 
+    StockAdjustmentSchema, 
+    StockTransferSchema,
+    StockInItemDetailSchema,  # <--- ที่เพิ่มเข้ามา
+    BatchStockInSchema        # <--- ที่เพิ่มเข้ามา
+)
 from .sale import Sale, SaleBase, SaleCreate, SaleItem, SaleItemBase, SaleItemCreate
 from .stock_count import (
     StockCountSession, StockCountSessionBase, StockCountSessionCreate, StockCountSessionUpdate,
@@ -16,12 +22,10 @@ from .stock_count import (
     StockCountSessionInList
 )
 # --- Add Dashboard Schemas ---
-from .dashboard import ( # Ensure the file name is dashboard.py
+from .dashboard import ( 
     KpiSummarySchema,
     SalesTrendItemSchema,
     ProductPerformanceItemSchema,
     CategoryDistributionItemSchema,
     RecentTransactionItemSchema
 )
-
-# -----------------------------

@@ -1,0 +1,36 @@
+runtime: python311 # หรือ python310, python312 ตามเวอร์ชันที่คุณใช้
+entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app # คำสั่งสำหรับรันแอปของคุณ
+
+instance_class: F1 # หรือ F2, F4 ตามทรัพยากรที่ต้องการ (เริ่มต้นด้วย F1 ก็ได้)
+
+env_variables:
+  # SESSION_SECRET_KEY: "your-strong-random-secret-key-here" # *** สำคัญมาก: ตั้งค่านี้ใน App Engine Console หรือผ่าน gcloud ไม่ควรใส่ค่าจริงใน app.yaml ถ้า repo เป็น public ***
+  # DATABASE_URL: "your-production-database-url-here" # *** สำคัญมาก: ตั้งค่านี้ใน App Engine Console หรือผ่าน gcloud ***
+  PYTHON_TZ: "Asia/Bangkok" # ตั้งค่า Timezone ให้ Python โดยตรง (ถ้า utils.py ยังมีปัญหา)
+
+handlers:
+# Handler สำหรับ Static Files (CSS, JS, รูปภาพ ถ้ามี)
+- url: /static
+  static_dir: static
+
+# Handler สำหรับแอปพลิเคชัน FastAPI ทั้งหมด
+# GAE จะ forward request ที่เหลือทั้งหมดไปที่ entrypoint ของคุณ
+- url: /.*
+  script: auto
+  secure: always # บังคับใช้ HTTPS
+
+# (Optional) การตั้งค่าสำหรับ Alembic migrations
+# ถ้าคุณต้องการรัน migration ตอน deploy อาจจะต้องใช้ Cloud Build triggers
+# หรือรันด้วยตนเองผ่าน Cloud Shell หลังจาก deploy
+
+# (Optional) Network settings (ถ้าจำเป็นต้องเชื่อมต่อ VPC หรือ services อื่นๆ)
+# network:
+#   session_affinity: true # ถ้าใช้ session middleware อาจจะจำเป็น
+
+# (Optional) Automatic scaling settings
+# automatic_scaling:
+#   target_cpu_utilization: 0.65
+#   min_instances: 1
+#   max_instances: 3
+#   min_idle_instances: 1 # ช่วยลด cold start
+#   max_concurrent_requests: 80 # ปรับตามความเหมาะสม

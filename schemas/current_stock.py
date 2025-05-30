@@ -8,7 +8,7 @@ from .location import Location as LocationSchema
 
 class CurrentStock(BaseModel):
     id: int
-    quantity: int
+    quantity: float  # <--- แก้ไข: int -> float
     last_updated: datetime
     product: ProductSchema
     location: LocationSchema
