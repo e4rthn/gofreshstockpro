@@ -1,319 +1,404 @@
 {% extends "base.html" %}
+
 {% block title %}รับสินค้าเข้า (Batch) - GoFresh StockPro{% endblock %}
 
 {% block head_extra %}
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
 <style>
-    .hidden { display: none !important; }
-    #product_search_input_batch { margin-bottom: 1rem; }
-    #selected_products_list .list-group-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0.75rem; 
-        font-size: 0.9rem;
-    }
-    #selected_products_list .product-info { 
-        overflow: hidden; 
-        text-overflow: ellipsis; 
-        white-space: nowrap;
-        flex-grow: 1;
-        margin-right: 0.5rem;
-    }
-    #selected_products_list .remove-item-btn { 
-        font-size: 0.8em; 
-        padding: 0.2rem 0.5rem; 
-        flex-shrink: 0;
+    /* CSS ที่จำเป็นสำหรับการจัด layout และ component เฉพาะของหน้านี้ */
+    #product_search_input_batch_mobile {
+        margin-bottom: 0.5rem;
     }
 
-    #batch_details_form_section { margin-top: 1.5rem; }
-    /* Compact Item Detail Card */
-    .item-detail-card {
-        margin-bottom: 0.75rem; /* Reduced margin */
-        border-left: 3px solid var(--hitech-accent);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    #product_browse_grid_batch_mobile {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem;
+        max-height: 320px;
+        overflow-y: auto;
+        background-color: transparent;
+        padding: 0.75rem;
+        border-radius: var(--bs-border-radius);
+        border: 1px solid var(--hitech-border, #dee2e6);
+        margin-top: 0.5rem;
     }
-    .item-detail-card .card-body { padding: 0.6rem; } /* Reduced padding */
-    .item-detail-card .card-title { 
-        font-size: 0.9rem; /* Smaller title */
-        font-weight: 600; 
-        margin-bottom: 0.3rem;
-    }
-    .item-detail-card .form-label { 
-        font-size: 0.75em; /* Smaller labels */
-        margin-bottom: 0.1rem; 
-        color: var(--hitech-text-secondary); 
-    }
-    .item-detail-card .form-control-sm,
-    .item-detail-card .form-select-sm { 
-        font-size: 0.8rem; /* Smaller inputs */
-        padding: 0.25rem 0.4rem; 
-        height: calc(1.5em + .5rem + 2px); /* Adjust height for sm inputs */
-    }
-     .item-detail-card .form-floating > label { /* Adjust floating label for sm inputs */
-        padding: 0.5rem 0.4rem;
-        font-size: 0.8rem;
-    }
-    .item-detail-card .form-floating > .form-control-sm:focus ~ label,
-    .item-detail-card .form-floating > .form-control-sm:not(:placeholder-shown) ~ label {
-        transform: scale(.75) translateY(-0.35rem) translateX(0.15rem);
-    }
-    .calculated-expiry-text { font-size: 0.75em; color: var(--hitech-info); margin-top: 0.15rem; font-weight: bold;}
-    
-    /* --- Styling for Product Browse Cards --- */
-    #product_browse_grid_batch .product-card-stock-in {
-        border: 1px solid #ced4da; /* Slightly darker border for more definition */
-        background-color: var(--hitech-surface);
-        padding: 0.5rem; /* Adjusted padding for content */
-        margin: 0.25rem; /* Reduced margin between cards */
+
+    .product-card-mobile {
+        background-color: var(--hitech-surface, #ffffff);
+        border: 1px solid var(--hitech-border, #dee2e6);
+        border-radius: var(--bs-border-radius-sm, 0.25rem);
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+        text-align: center;
         cursor: pointer;
-        text-align: center; 
-        min-height: 70px;
+        transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.2s ease;
         display: flex;
-        flex-direction: column; justify-content: center; /* Center content vertically */
-        border-radius: 6px; 
-        transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-        font-size: 0.75rem; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Softer, more defined shadow */
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 90px;
     }
-    #product_browse_grid_batch .product-card-stock-in:hover {
-        background-color: rgba(var(--hitech-accent-rgb), 0.08);
-        border-color: var(--hitech-accent);
+    .product-card-mobile:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(var(--hitech-accent-rgb), 0.1);
+        border-color: var(--hitech-accent, #00b359);
+        box-shadow: 0 4px 12px rgba(var(--hitech-accent-rgb, 0, 179, 89), 0.15);
     }
-    /* --- Animation class for clicked card --- */
-    #product_browse_grid_batch .product-card-stock-in.card-selected-animation {
-        transform: scale(0.92);
-        border-color: var(--hitech-success) !important; /* Use success color for feedback */
-        box-shadow: 0 0 10px rgba(var(--hitech-success-rgb), 0.4) !important;
+    .product-card-mobile.card-selected-animation-mobile {
+        transform: scale(0.95) translateY(0);
     }
-    #product_browse_grid_batch .product-card-stock-in .name {
-        font-size: 0.9em; 
-        font-weight: 600; 
-        margin-bottom:2px; 
+    .product-card-mobile.selected {
+        border-color: var(--hitech-success, #198754) !important;
+        box-shadow: 0 0 0 0.15rem rgba(var(--hitech-success-rgb, 25, 135, 84), 0.45);
+    }
+    .product-card-mobile .name {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
         color: var(--hitech-text-primary);
-        line-height: 1.2; /* Prevent very long names from taking too much space */
-        max-height: 2.4em; /* Approx 2 lines */
+        font-size: 0.9em;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 2.6em;
     }
-    #product_browse_grid_batch .product-card-stock-in .sku {
-        font-size: 0.8em; 
+    .product-card-mobile .sku {
+        font-size: 0.8em;
+        color: var(--hitech-text-secondary);
+        word-break: break-all;
+    }
+
+    #selected_products_list_mobile .list-group-item {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+        background-color: var(--hitech-surface-hover);
+    }
+    #selected_products_list_mobile .product-info { margin-right: auto; }
+    #selected_products_list_mobile .remove-item-btn {
+         padding: 0.1rem 0.4rem;
+         line-height: 1;
+    }
+
+    .item-detail-card-mobile {
+        background-color: var(--hitech-surface);
+        border: 1px solid var(--hitech-border);
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: var(--bs-border-radius);
+        box-shadow: var(--bs-box-shadow-sm);
+    }
+    .item-detail-card-mobile .card-title-mobile {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--hitech-accent);
+    }
+    .item-detail-card-mobile .form-floating > label {
+        font-size: 0.85rem;
+    }
+    .item-detail-card-mobile .calculated-expiry-text {
+        font-size: 0.8rem;
         color: var(--hitech-text-secondary);
     }
-    /* --- End Product Browse Card Styling --- */
-
-    .batch-date-apply-section { margin-bottom: 1rem; padding: 0.75rem; background-color: var(--hitech-surface-hover); border-radius: 0.25rem; }
-    .batch-date-apply-section .form-label { font-size: 0.85em; }
-    .batch-date-apply-section .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-
-    @media (max-width: 767.98px) {
-        .item-detail-card .row > div[class*="col-"] { margin-bottom: 0.4rem; }
-        .form-actions-mobile-full-width .btn { width: 100%; margin-bottom: 0.5rem; }
-        .form-actions-mobile-full-width .btn:last-child { margin-bottom: 0; }
-        #product_browse_grid_batch.row { --bs-gutter-x: 0.5rem; --bs-gutter-y: 0.5rem; }
-        #product_browse_grid_batch > .col-6 { padding-left: 0.25rem; padding-right: 0.25rem;}
+    .batch-date-apply-section {
+        background-color: var(--hitech-surface-hover);
+        border-radius: var(--bs-border-radius-sm);
     }
-    .form-floating > label { font-size: 0.85rem; }
+
+    .stockin-footer-actions {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: var(--hitech-surface, #ffffff);
+        padding: 0.75rem 1rem;
+        border-top: 1px solid var(--hitech-border, #dee2e6);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+        z-index: 1020;
+        display: flex;
+        gap: 0.5rem;
+    }
+    .stockin-footer-actions .btn {
+        flex-grow: 1;
+        font-weight: 500;
+    }
+
+    @media (min-width: 768px) {
+        .stockin-main-content-flex {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .stockin-phase1-col, .stockin-phase2-col {
+            flex: 1;
+        }
+        .stockin-footer-actions {
+            justify-content: flex-end;
+        }
+        .stockin-footer-actions .btn {
+            flex-grow: 0;
+            min-width: 150px;
+        }
+    }
+
+    .hidden { display: none !important; }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1><i class="bi bi-box-seam me-2"></i>บันทึกการรับสินค้าเข้า (แบบหลายรายการ)</h1>
-<hr>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1><i class="bi bi-box-arrow-in-down me-2 text-accent"></i>รับสินค้าเข้า (Batch)</h1>
+</div>
 {% include '_alert_messages.html' %}
 
-{% if form_data_raw %}
-<script id="form_data_raw_script" type="application/json">
-    {{ form_data_raw | tojson | safe }}
-</script>
-{% endif %}
-
-<form method="post" id="batchStockInForm" action="{{ request.app.url_path_for('ui_process_stock_in_details_for_review') }}">
-    <div class="row gx-lg-4">
-        <div class="col-lg-5 mb-3">
-            <div class="card sticky-lg-top" style="top: 70px;">
-                <div class="card-header"><h5 class="mb-0"><i class="bi bi-plus-circle-dotted me-1"></i>1. เลือกสินค้าเข้ารายการ</h5></div>
+<form method="post" id="batchStockInFormMobile" action="{{ request.app.url_path_for('ui_process_stock_in_details_for_review') }}">
+    <div class="stockin-main-content-flex">
+        <div class="col-12 col-md-5 stockin-phase1-col">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">1. เลือกสินค้าเข้ารายการ</h5>
+                </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="product_search_input_batch" class="form-label">สแกน SKU/Barcode หรือค้นหาชื่อสินค้า:</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="product_search_input_batch" placeholder="พิมพ์แล้ว Enter หรือ Tab">
-                            <button class="btn btn-outline-secondary" type="button" id="product_search_btn_batch"><i class="bi bi-search"></i></button>
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="product_search_input_batch_mobile" placeholder="สแกน SKU/Barcode หรือพิมพ์ชื่อสินค้า">
+                            <label for="product_search_input_batch_mobile">สแกน/ค้นหา/พิมพ์ชื่อสินค้า</label>
                         </div>
-                        <div id="product_search_error_batch" class="text-danger small mt-1"></div>
+                        <div id="product_search_error_batch_mobile" class="text-danger small mt-1"></div>
                     </div>
-                    <div class="mb-2">
-                        <label for="category_select_batch" class="form-label small">หรือเลือกจากหมวดหมู่:</label>
-                        <select class="form-select form-select-sm" id="category_select_batch">
-                            <option value="">-- ทุกหมวดหมู่ --</option>
-                            {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
-                        </select>
+                    <div class="mb-3">
+                        <div class="form-floating">
+                            <select class="form-select" id="category_select_batch_mobile" aria-label="เลือกหมวดหมู่">
+                                <option value="">-- ทุกหมวดหมู่ --</option>
+                                {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+                            </select>
+                            <label for="category_select_batch_mobile">หรือเลือกจากหมวดหมู่:</label>
+                        </div>
                     </div>
-                    <div id="product_browse_grid_batch" class="row row-cols-3 row-cols-sm-3 row-cols-md-4 g-1" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--hitech-border); padding: 5px; border-radius:4px; background-color: var(--hitech-bg);">
-                        <p class="text-muted small p-2 col-12" id="product_grid_placeholder_batch">เลือกหมวดหมู่หรือค้นหาเพื่อแสดงสินค้า</p>
+                    <div id="product_browse_grid_batch_mobile">
+                        <p class="text-muted small p-2" id="product_grid_placeholder_batch_mobile" style="grid-column: 1 / -1;">เลือกหมวดหมู่หรือค้นหา...</p>
                     </div>
 
                     <hr class="my-3">
-                    <h6><i class="bi bi-list-stars"></i> สินค้าใน Batch (<span id="selected_item_count">0</span>):</h6>
-                    <ul class="list-group mb-3" id="selected_products_list" style="max-height: 180px; overflow-y: auto;">
-                        <li class="list-group-item text-muted small" id="no_selected_items_placeholder_batch">ยังไม่มีสินค้าในรายการ</li>
+                    <h6>สินค้าใน Batch (<span id="selected_item_count_mobile">0</span>):</h6>
+                    <ul class="list-group list-group-flush mb-0" id="selected_products_list_mobile" style="max-height: 200px; overflow-y: auto;">
+                        <li class="list-group-item text-muted small" id="no_selected_items_placeholder_mobile">ยังไม่มีสินค้า</li>
                     </ul>
-                    <button type="button" class="btn btn-primary w-100" id="proceed_to_details_btn" disabled>
-                        <i class="bi bi-card-checklist me-1"></i> กรอกรายละเอียด <span class="badge bg-light text-dark ms-1" id="proceed_item_count_badge">0</span>
-                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-7 mb-3">
-            <div class="card">
-                <div class="card-header"><h5 class="mb-0"><i class="bi bi-pencil-square me-1"></i>2. กรอกรายละเอียดการรับเข้า</h5></div>
+        <div class="col-12 col-md-7 stockin-phase2-col">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">2. กรอกรายละเอียด Batch และรายการสินค้า</h5>
+                </div>
                 <div class="card-body">
                     <div class="mb-3 form-floating">
-                        <select class="form-select" id="location_id_batch" name="location_id" required aria-label="สถานที่จัดเก็บ">
-                            <option value="">-- เลือกสถานที่สำหรับ Batch นี้ --</option>
+                        <select class="form-select" id="location_id_batch_mobile" name="location_id" required aria-label="เลือกสถานที่">
+                            <option value="">-- เลือกสถานที่ --</option>
                             {% for location in locations %}<option value="{{ location.id }}">{{ location.name }}</option>{% endfor %}
                         </select>
-                        <label for="location_id_batch">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
+                        <label for="location_id_batch_mobile">สถานที่จัดเก็บ <span class="text-danger">*</span></label>
                     </div>
                     <div class="mb-3 form-floating">
-                         <textarea class="form-control" id="batch_notes" name="batch_notes" placeholder="หมายเหตุรวมสำหรับ Batch (ถ้ามี)" style="height: 60px"></textarea>
-                         <label for="batch_notes">หมายเหตุรวม (ถ้ามี)</label>
+                         <textarea class="form-control" id="batch_notes_mobile" name="batch_notes" style="height: 70px;" placeholder="หมายเหตุรวม"></textarea>
+                         <label for="batch_notes_mobile">หมายเหตุรวม (ถ้ามี)</label>
                     </div>
                     
-                    <div class="batch-date-apply-section">
+                    <div class="batch-date-apply-section p-3 mb-3">
                         <div class="row g-2 align-items-end">
+                            <div class="col-sm-7 mb-2 mb-sm-0 form-floating">
+                                <input type="date" class="form-control" id="batch_default_production_date_mobile" placeholder=" ">
+                                <label for="batch_default_production_date_mobile">วันผลิตเริ่มต้น (ทั้งหมด):</label>
+                            </div>
                             <div class="col-sm-5">
-                                <label for="batch_default_production_date" class="form-label">วันผลิต (สำหรับทุกรายการ):</label>
-                                <input type="date" class="form-control form-control-sm" id="batch_default_production_date">
-                            </div>
-                            <div class="col-sm-3">
-                                <button type="button" class="btn btn-outline-primary btn-sm w-100 mt-auto" id="apply_prod_date_all_btn">ใช้กับทั้งหมด</button>
-                            </div>
-                             <div class="col-sm-4 d-flex align-items-center pt-3">
-                                <div class="form-check form-switch">
-                                     <input class="form-check-input" type="checkbox" role="switch" id="toggle_expiry_input_all_switch">
-                                     <label class="form-check-label small" for="toggle_expiry_input_all_switch">กรอกวันหมดอายุตรง</label>
-                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm w-100 py-2" id="apply_prod_date_all_btn_mobile">ใช้กับทั้งหมด</button>
                             </div>
                         </div>
-                        <div class="row g-2 align-items-end mt-1 hidden" id="batch_default_expiry_date_row">
-                            <div class="col-sm-5">
-                                <label for="batch_default_expiry_date" class="form-label">วันหมดอายุ (สำหรับทุกรายการ):</label>
-                                <input type="date" class="form-control form-control-sm" id="batch_default_expiry_date">
+                         <div class="form-check form-switch mt-2 mb-2">
+                             <input class="form-check-input" type="checkbox" role="switch" id="toggle_expiry_input_all_switch_mobile">
+                             <label class="form-check-label small" for="toggle_expiry_input_all_switch_mobile">กรอกวันหมดอายุโดยตรง (แทนการคำนวณ)</label>
+                        </div>
+                        <div class="row g-2 align-items-end hidden" id="batch_default_expiry_date_row_mobile">
+                            <div class="col-sm-7 mb-2 mb-sm-0 form-floating">
+                                <input type="date" class="form-control" id="batch_default_expiry_date_mobile" placeholder=" ">
+                                <label for="batch_default_expiry_date_mobile">วันหมดอายุเริ่มต้น (ทั้งหมด):</label>
                             </div>
-                            <div class="col-sm-3">
-                                <button type="button" class="btn btn-outline-primary btn-sm w-100 mt-auto" id="apply_exp_date_all_btn">ใช้กับทั้งหมด</button>
+                            <div class="col-sm-5">
+                                <button type="button" class="btn btn-outline-primary btn-sm w-100 py-2" id="apply_exp_date_all_btn_mobile">ใช้กับทั้งหมด</button>
                             </div>
                         </div>
                     </div>
-                    <hr>
-                    <div id="batch_items_details_container">
-                        <p class="text-muted text-center p-3" id="details_placeholder_batch">เลือกสินค้าในขั้นตอนที่ 1 และกด "กรอกรายละเอียด" เพื่อเริ่ม</p>
-                        </div>
+                    <hr class="mt-4">
+                    <div id="batch_items_details_container_mobile">
+                        <p class="text-muted text-center p-3" id="details_placeholder_batch_mobile">เลือกสินค้าในขั้นตอนที่ 1 ก่อน เพื่อกรอกรายละเอียด</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="mt-3 d-flex justify-content-center gap-2 form-actions-mobile-full-width">
-        <button type="submit" class="btn btn-success btn-lg px-5" id="review_batch_btn" disabled>
-            <i class="bi bi-check-circle-fill me-2"></i> ตรวจสอบและยืนยัน Batch
+    
+    <div class="stockin-footer-actions">
+         <button type="button" class="btn btn-outline-secondary" id="show_phase1_btn_mobile"> <i class="bi bi-list-ul"></i> เลือกสินค้า (<span class="selected_item_count_display">0</span>) </button>
+         <button type="button" class="btn btn-primary" id="show_phase2_btn_mobile" disabled> <i class="bi bi-pencil-square"></i> กรอกรายละเอียด </button>
+         <button type="submit" class="btn btn-success" id="review_batch_btn_mobile" disabled>
+            <i class="bi bi-check-circle-fill"></i> ตรวจสอบ Batch
         </button>
-        <a href="{{ request.app.url_path_for('ui_show_stock_in_form') }}" class="btn btn-secondary btn-lg">ล้างและเริ่มใหม่</a>
     </div>
 </form>
 
-<template id="item_detail_card_template">
-    <div class="card item-detail-card" data-product-id="PRODUCT_ID_VAL">
-        <div class="card-body">
-            <h6 class="card-title">
-                <span class="product-name-display">Product Name</span> 
-                <small class="text-muted product-sku-display">(SKU: ...)</small>
-            </h6>
-            <input type="hidden" name="items[INDEX][product_id]" class="item-product-id" value="PRODUCT_ID_VAL">
-            <input type="hidden" class="item-shelf-life" value="SHELF_LIFE_VAL">
-            <div class="row g-2 align-items-center">
-                <div class="col-7 col-sm-6 form-floating mb-1"> 
-                    <input type="number" min="0.01" step="any" class="form-control form-control-sm item-quantity" name="items[INDEX][quantity]" required placeholder="จำนวน" id="item_INDEX_quantity">
-                    <label for="item_INDEX_quantity">จำนวน <span class="text-danger">*</span></label>
-                </div>
-                <div class="col-5 col-sm-6 small text-muted text-sm-end item-shelf-life-display mb-1 align-self-center"> 
-                    อายุ: - วัน
-                </div>
-                 </div>
-            <div class="row g-2">
-                <div class="col-md-6 form-floating item-production-date-group hidden">
-                    <input type="date" class="form-control form-control-sm item-production-date" name="items[INDEX][production_date]" placeholder=" " id="item_INDEX_prod_date">
-                    <label for="item_INDEX_prod_date">วันผลิต</label>
-                    <div class="calculated-expiry-text"></div>
-                </div>
-                <div class="col-md-6 form-floating item-expiry-date-group hidden">
-                    <input type="date" class="form-control form-control-sm item-expiry-date" name="items[INDEX][expiry_date]" placeholder=" " id="item_INDEX_exp_date">
-                    <label for="item_INDEX_exp_date">วันหมดอายุ</label>
-                </div>
-            </div>
-            </div>
+<template id="item_detail_card_template_mobile">
+    <div class="item-detail-card-mobile" data-product-id-mobile="PRODUCT_ID_VAL">
+        <h6 class="card-title-mobile">
+            <span class="product-name-display-mobile">Product Name</span> 
+            <small class="text-muted product-sku-display-mobile">(SKU: ...)</small>
+        </h6>
+        <input type="hidden" name="items[INDEX][product_id]" class="item-product-id-mobile">
+        <input type="hidden" class="item-shelf-life-mobile">
+        
+        {# ***** START MODIFICATION: Quantity input now takes full width ***** #}
+        <div class="form-floating mb-2">
+            <input type="number" min="0.01" step="any" class="form-control item-quantity-mobile" name="items[INDEX][quantity]" required id="item_INDEX_quantity_mobile" placeholder="จำนวน">
+            <label for="item_INDEX_quantity_mobile">จำนวน (กิโลกรัม) <span class="text-danger">*</span></label>
+        </div>
+        {# ***** END MODIFICATION: Cost per unit div removed ***** #}
+        
+        <div class="item-production-date-group-mobile hidden mb-2 form-floating">
+            <input type="date" class="form-control item-production-date-mobile" name="items[INDEX][production_date]" id="item_INDEX_prod_date_mobile" placeholder=" ">
+            <label for="item_INDEX_prod_date_mobile">วันผลิต (<span class="item-shelf-life-display-mobile"></span>)</label>
+            <div class="calculated-expiry-text small mt-1 text-muted"></div>
+        </div>
+        <div class="item-expiry-date-group-mobile hidden mb-2 form-floating">
+            <input type="date" class="form-control item-expiry-date-mobile" name="items[INDEX][expiry_date]" id="item_INDEX_exp_date_mobile" placeholder=" ">
+            <label for="item_INDEX_exp_date_mobile">วันหมดอายุ</label>
+        </div>
     </div>
 </template>
+
+{% if form_data_raw %}
+<script id="form_data_raw_script_mobile" type="application/json">
+    {{ form_data_raw | tojson | safe }}
+</script>
+{% endif %}
 
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
+// JavaScript ทั้งหมดเหมือนกับเวอร์ชันก่อนหน้าที่มีการปรับปรุง toggle selection
+// ไม่จำเป็นต้องแก้ไข JavaScript สำหรับการเอาช่อง cost per unit ออก
+// (เนื้อหา JavaScript เดิมทั้งหมดจะอยู่ที่นี่)
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Element Selectors (Phase 1) ---
-    const productSearchInput = document.getElementById('product_search_input_batch');
-    const productSearchBtn = document.getElementById('product_search_btn_batch');
-    const productSearchError = document.getElementById('product_search_error_batch');
-    const categorySelect = document.getElementById('category_select_batch');
-    const productBrowseGrid = document.getElementById('product_browse_grid_batch');
-    const productGridPlaceholder = document.getElementById('product_grid_placeholder_batch');
+    const phase1Col = document.querySelector('.stockin-phase1-col');
+    const phase2Col = document.querySelector('.stockin-phase2-col');
+    const showPhase1Btn = document.getElementById('show_phase1_btn_mobile');
+    const showPhase2Btn = document.getElementById('show_phase2_btn_mobile');
+    const reviewBatchBtnMobile = document.getElementById('review_batch_btn_mobile'); 
+    const selectedItemCountDisplays = document.querySelectorAll('.selected_item_count_display');
+
+    const isMobileView = () => window.innerWidth < 768;
+
+    function showPhase(phaseNum) {
+        const footerActions = document.querySelector('.stockin-footer-actions');
+        if (isMobileView()) { 
+            if (phase1Col) phase1Col.style.display = (phaseNum === 1) ? 'block' : 'none';
+            if (phase2Col) phase2Col.style.display = (phaseNum === 2) ? 'block' : 'none';
+            
+            if (showPhase1Btn) {
+                showPhase1Btn.classList.toggle('active', phaseNum === 1);
+                showPhase1Btn.classList.toggle('btn-info', phaseNum === 1); 
+                showPhase1Btn.classList.toggle('btn-outline-secondary', phaseNum !== 1);
+                showPhase1Btn.classList.remove('hidden');
+            }
+            if (showPhase2Btn) {
+                showPhase2Btn.classList.toggle('active', phaseNum === 2);
+                showPhase2Btn.classList.toggle('btn-info', phaseNum === 2); 
+                showPhase2Btn.classList.toggle('btn-primary', phaseNum !== 2);
+                showPhase2Btn.classList.remove('hidden');
+            }
+            if (reviewBatchBtnMobile) reviewBatchBtnMobile.classList.toggle('hidden', phaseNum === 1);
+
+        } else { 
+            if (phase1Col) phase1Col.style.display = 'block';
+            if (phase2Col) phase2Col.style.display = 'block';
+            if (showPhase1Btn) showPhase1Btn.classList.add('hidden'); 
+            if (showPhase2Btn) showPhase2Btn.classList.add('hidden');
+            if (reviewBatchBtnMobile) reviewBatchBtnMobile.classList.remove('hidden'); 
+        }
+        if (footerActions && !isMobileView()){
+             footerActions.classList.add('d-md-flex', 'justify-content-end'); 
+             footerActions.classList.remove('justify-content-center'); 
+        } else if (footerActions && isMobileView()){
+            footerActions.classList.remove('d-md-flex', 'justify-content-end', 'justify-content-center');
+        }
+        updateButtonStates(); 
+    }
     
-    const selectedProductsListEl = document.getElementById('selected_products_list');
-    const noSelectedItemsPlaceholder = document.getElementById('no_selected_items_placeholder_batch');
-    const selectedItemCountSpan = document.getElementById('selected_item_count');
-    const proceedToDetailsBtn = document.getElementById('proceed_to_details_btn');
-    const proceedItemCountBadge = document.getElementById('proceed_item_count_badge');
+    if(showPhase1Btn && showPhase2Btn){ 
+        showPhase1Btn.addEventListener('click', () => showPhase(1));
+        showPhase2Btn.addEventListener('click', () => {
+            if(selectedProducts.size === 0 && isMobileView()) { 
+                alert("กรุณาเลือกสินค้าอย่างน้อย 1 รายการก่อนไปขั้นตอนถัดไป");
+                return;
+            }
+            if (!detailFormRendered) { 
+                renderAllDetailFormsMobile();
+            }
+            showPhase(2);
+        });
+    }
     
-    // --- Element Selectors (Phase 2) ---
-    const batchItemsDetailsContainer = document.getElementById('batch_items_details_container');
-    const detailsPlaceholder = document.getElementById('details_placeholder_batch');
-    const itemDetailCardTemplate = document.getElementById('item_detail_card_template');
-    const locationIdBatchSelect = document.getElementById('location_id_batch');
-    const reviewBatchBtn = document.getElementById('review_batch_btn');
+    const productSearchInput = document.getElementById('product_search_input_batch_mobile');
+    const productSearchError = document.getElementById('product_search_error_batch_mobile');
+    const categorySelect = document.getElementById('category_select_batch_mobile');
+    const productBrowseGrid = document.getElementById('product_browse_grid_batch_mobile');
+    const productGridPlaceholder = document.getElementById('product_grid_placeholder_batch_mobile');
     
-    const batchDefaultProdDateInput = document.getElementById('batch_default_production_date');
-    const applyProdDateAllBtn = document.getElementById('apply_prod_date_all_btn');
-    const batchDefaultExpDateInput = document.getElementById('batch_default_expiry_date');
-    const applyExpDateAllBtn = document.getElementById('apply_exp_date_all_btn');
-    const toggleExpiryInputAllSwitch = document.getElementById('toggle_expiry_input_all_switch');
-    const batchDefaultExpiryDateRow = document.getElementById('batch_default_expiry_date_row');
+    const selectedProductsListEl = document.getElementById('selected_products_list_mobile');
+    const noSelectedItemsPlaceholder = document.getElementById('no_selected_items_placeholder_mobile');
+    
+    const batchItemsDetailsContainer = document.getElementById('batch_items_details_container_mobile');
+    const detailsPlaceholder = document.getElementById('details_placeholder_batch_mobile');
+    const itemDetailCardTemplate = document.getElementById('item_detail_card_template_mobile');
+    const locationIdBatchSelect = document.getElementById('location_id_batch_mobile');
+    
+    const batchDefaultProdDateInput = document.getElementById('batch_default_production_date_mobile');
+    const applyProdDateAllBtn = document.getElementById('apply_prod_date_all_btn_mobile');
+    const batchDefaultExpDateInput = document.getElementById('batch_default_expiry_date_mobile');
+    const applyExpDateAllBtn = document.getElementById('apply_exp_date_all_btn_mobile');
+    const toggleExpiryInputAllSwitch = document.getElementById('toggle_expiry_input_all_switch_mobile');
+    const batchDefaultExpiryDateRow = document.getElementById('batch_default_expiry_date_row_mobile');
+    const batchStockInForm = document.getElementById('batchStockInFormMobile');
 
     let selectedProducts = new Map(); 
     let detailFormRendered = false;
     let itemDetailIndexCounter = 0; 
 
-    function updateProceedButton() {
+    function updateButtonStates() {
         const count = selectedProducts.size;
-        selectedItemCountSpan.textContent = count;
-        proceedItemCountBadge.textContent = count;
-        proceedToDetailsBtn.disabled = count === 0;
-        if (count > 0) {
-            noSelectedItemsPlaceholder.classList.add('hidden');
-        } else {
-            noSelectedItemsPlaceholder.classList.remove('hidden');
-            batchItemsDetailsContainer.innerHTML = ''; 
-            detailsPlaceholder.classList.remove('hidden');
-            detailFormRendered = false;
+        if (selectedItemCountDisplays) selectedItemCountDisplays.forEach(el => el.textContent = count);
+
+        if (showPhase2Btn) showPhase2Btn.disabled = count === 0; 
+        if (reviewBatchBtnMobile) reviewBatchBtnMobile.disabled = count === 0 || !detailFormRendered || (locationIdBatchSelect && !locationIdBatchSelect.value);
+        
+        if (noSelectedItemsPlaceholder) {
+            if (count > 0) {
+                noSelectedItemsPlaceholder.classList.add('hidden');
+            } else {
+                noSelectedItemsPlaceholder.classList.remove('hidden');
+                if (detailFormRendered && batchItemsDetailsContainer && detailsPlaceholder) { 
+                     batchItemsDetailsContainer.innerHTML = ''; 
+                     detailsPlaceholder.classList.remove('hidden');
+                     detailFormRendered = false;
+                }
+            }
         }
-        updateReviewButtonState();
     }
-
-    function updateReviewButtonState() {
-        reviewBatchBtn.disabled = selectedProducts.size === 0 || !detailFormRendered || !locationIdBatchSelect.value;
-    }
-
-    async function fetchProductForSelection(productIdentifier) {
+    
+    async function fetchProductForSelectionMobile(productIdentifier) {
+        if(!productSearchError) return; 
         if (!productIdentifier || productIdentifier.trim().length === 0) {
              productSearchError.textContent = 'กรุณากรอกรหัสหรือชื่อสินค้า';
              return;
@@ -325,203 +410,204 @@ document.addEventListener('DOMContentLoaded', function() {
                 const errorData = await response.json().catch(() => ({detail: `ไม่พบสินค้า (${response.status})`}));
                 throw new Error(errorData.detail);
             }
-            const product = await response.json(); // product should contain: id, name, sku, shelf_life_days, standard_cost (if available)
+            const product = await response.json();
             if (product && product.id) {
-                addProductToSelectedList(product); 
+                toggleProductSelection(product); 
                 productSearchError.textContent = '';
+                if(productSearchInput) productSearchInput.value = '';
             } else {
-                 // If lookup-by-scan doesn't find exact, try broader search for browse grid
-                loadProductsForBrowseGrid(categorySelect.value, productIdentifier.trim());
-                productSearchError.textContent = 'ไม่พบ SKU/Barcode ตรงกัน, แสดงผลการค้นหาจากชื่อด้านล่าง (ถ้ามี)';
-
+                if(categorySelect) loadProductsForBrowseGridMobile(categorySelect.value, productIdentifier.trim());
+                productSearchError.textContent = 'ไม่พบ SKU/Barcode, ลองค้นหาจากชื่อ';
             }
         } catch (error) {
-            console.error('Product search error:', error);
+            console.error('Product search error (mobile):', error);
             productSearchError.textContent = error.message;
-            loadProductsForBrowseGrid(categorySelect.value, productIdentifier.trim()); // Attempt to show browse grid results on error too
+            if(categorySelect) loadProductsForBrowseGridMobile(categorySelect.value, productIdentifier.trim());
         }
+    }
+
+    function toggleProductSelection(product) {
+        if (!product || !product.id) return;
+
+        const cardInGrid = productBrowseGrid ? productBrowseGrid.querySelector(`.product-card-mobile[data-product-id="${product.id}"]`) : null;
+
+        if (selectedProducts.has(product.id)) {
+            selectedProducts.delete(product.id);
+            if (selectedProductsListEl) {
+                const listItemToRemove = selectedProductsListEl.querySelector(`li[data-product-id="${product.id}"]`);
+                if (listItemToRemove) listItemToRemove.remove();
+            }
+            if (cardInGrid) cardInGrid.classList.remove('selected');
+            if (detailFormRendered && batchItemsDetailsContainer) {
+                const detailCardToRemove = batchItemsDetailsContainer.querySelector(`.item-detail-card-mobile[data-product-id-mobile="${product.id}"]`);
+                if (detailCardToRemove) detailCardToRemove.remove();
+                if (batchItemsDetailsContainer.childElementCount === 0 && detailsPlaceholder) {
+                    detailsPlaceholder.classList.remove('hidden');
+                }
+            }
+        } else {
+            const productDataForMap = {
+                id: product.id, name: product.name || 'N/A', sku: product.sku || 'N/A',
+                shelf_life_days: (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : null,
+                barcode: product.barcode || null
+            };
+            selectedProducts.set(product.id, productDataForMap);
+            if (selectedProductsListEl) {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                listItem.dataset.productId = product.id;
+                listItem.innerHTML = `<span class="product-info">${productDataForMap.name} (SKU: ${productDataForMap.sku})</span>
+                                      <button type="button" class="btn btn-danger btn-sm remove-item-btn"><i class="bi bi-x-lg"></i></button>`;
+                listItem.querySelector('.remove-item-btn').onclick = function() {
+                    const productIdToRemove = parseInt(listItem.dataset.productId);
+                    selectedProducts.delete(productIdToRemove);
+                    listItem.remove();
+                    if(productBrowseGrid){
+                        const correspondingGridCard = productBrowseGrid.querySelector(`.product-card-mobile[data-product-id="${productIdToRemove}"]`);
+                        if (correspondingGridCard) correspondingGridCard.classList.remove('selected');
+                    }
+                    if (batchItemsDetailsContainer) {
+                        const detailCard = batchItemsDetailsContainer.querySelector(`.item-detail-card-mobile[data-product-id-mobile="${productIdToRemove}"]`);
+                        if (detailCard) detailCard.remove();
+                         if (batchItemsDetailsContainer.childElementCount === 0 && detailsPlaceholder) {
+                            detailsPlaceholder.classList.remove('hidden');
+                        }
+                    }
+                    updateButtonStates();
+                    if (selectedProducts.size === 0 && detailFormRendered && detailsPlaceholder) {
+                        if (isMobileView()) showPhase(1);
+                    }
+                };
+                selectedProductsListEl.appendChild(listItem);
+            }
+            if (cardInGrid) cardInGrid.classList.add('selected');
+            if (detailFormRendered && batchItemsDetailsContainer && phase2Col && (phase2Col.style.display === 'block' || !isMobileView())) {
+                 if (detailsPlaceholder) detailsPlaceholder.classList.add('hidden');
+                renderSingleItemDetailCardMobile(productDataForMap, itemDetailIndexCounter++);
+            }
+        }
+        updateButtonStates();
+        if (productSearchInput) productSearchInput.value = '';
     }
     
-    function addProductToSelectedList(product) {
-        if (!product || !product.id) return;
-        if (selectedProducts.has(product.id)) {
-            productSearchError.textContent = `สินค้า ${product.name || product.sku} มีในรายการแล้ว`;
-            setTimeout(() => productSearchError.textContent = '', 3000);
-            productSearchInput.focus();
-            productSearchInput.select();
-            return;
-        }
-        // Ensure all necessary fields are present, providing defaults if not
-        const productDataForMap = {
-            id: product.id,
-            name: product.name || 'N/A',
-            sku: product.sku || 'N/A',
-            shelf_life_days: (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : null,
-            standard_cost: (product.standard_cost !== null && product.standard_cost !== undefined) ? product.standard_cost : null,
-            barcode: product.barcode || null
-        };
-        selectedProducts.set(product.id, productDataForMap);
-
-
-        const listItem = document.createElement('li');
-        listItem.className = 'list-group-item';
-        listItem.dataset.productId = product.id;
-        
-        const productInfo = document.createElement('span');
-        productInfo.className = 'product-info';
-        productInfo.textContent = `${productDataForMap.name} (SKU: ${productDataForMap.sku})`;
-        
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-danger btn-sm remove-item-btn';
-        removeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
-        removeBtn.onclick = function() {
-            const productId = parseInt(listItem.dataset.productId);
-            selectedProducts.delete(productId);
-            listItem.remove();
-            const detailCard = batchItemsDetailsContainer.querySelector(`.item-detail-card[data-product-id="${productId}"]`);
-            if (detailCard) detailCard.remove();
-            updateProceedButton();
-             if (selectedProducts.size === 0 && detailFormRendered) {
-                detailsPlaceholder.classList.remove('hidden');
-            }
-        };
-        
-        listItem.appendChild(productInfo);
-        listItem.appendChild(removeBtn);
-        selectedProductsListEl.appendChild(listItem);
-        updateProceedButton();
-        productSearchInput.value = ''; 
-        productSearchInput.focus();
-        
-        if(detailFormRendered){ // If details section is already active, add new card immediately
-            renderSingleItemDetailCard(productDataForMap, itemDetailIndexCounter++);
-        }
-    }
-
-    async function loadProductsForBrowseGrid(categoryId, searchQuery = null) {
+    async function loadProductsForBrowseGridMobile(categoryId, searchQuery = null) {
+        if(!productBrowseGrid || !productGridPlaceholder) return;
         productGridPlaceholder.style.display = 'none';
-        productBrowseGrid.innerHTML = '<p class="text-muted small p-2 col-12">กำลังโหลดสินค้า...</p>';
-        
-        console.log("loadProductsForBrowseGrid - categoryId:", categoryId, "searchQuery:", searchQuery); // DEBUG
-
-        let apiUrl = '/api/products?limit=100'; 
+        productBrowseGrid.innerHTML = '<div class="col-12 text-center p-3"><div class="spinner-border spinner-border-sm text-secondary" role="status"><span class="visually-hidden">กำลังโหลด...</span></div></div>';
+        let apiUrl = '/api/products?limit=50'; 
         if (categoryId && categoryId.trim() !== "") { 
             apiUrl = `/api/products/by-category/${categoryId}/basic`;
         }
-        
-        console.log("Using API URL:", apiUrl); // DEBUG
-        
         try {
             const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error('Failed to load products. Status: ' + response.status);
+            if (!response.ok) throw new Error('โหลดสินค้าไม่สำเร็จ: ' + response.statusText);
             const apiResult = await response.json();
-            console.log("API Response:", apiResult); // DEBUG
-            
             let products = Array.isArray(apiResult) ? apiResult : (apiResult.items || []);
-            productBrowseGrid.innerHTML = '';
-
-            if (searchQuery && searchQuery.trim() !== "") {
+            productBrowseGrid.innerHTML = ''; 
+            if (searchQuery && searchQuery.trim() !== "") { 
                 const lowerQuery = searchQuery.toLowerCase();
                 products = products.filter(p => 
                     (p.name && p.name.toLowerCase().includes(lowerQuery)) || 
                     (p.sku && p.sku.toLowerCase().includes(lowerQuery)) ||
                     (p.barcode && p.barcode.toLowerCase().includes(lowerQuery))
                 );
-            }
+             }
 
             if (products.length > 0) {
-                products.forEach(product => { 
-                    const cardContainer = document.createElement('div');
-                    cardContainer.className = 'col-6 col-sm-4 col-md-4'; // Adjusted for browse grid
-                    
+                products.forEach(product => {
                     const card = document.createElement('div');
-                    card.className = 'product-card-stock-in'; 
-                    card.innerHTML = `<div class="name">${product.name}</div><div class="sku text-muted">SKU: ${product.sku}</div>`;
-                    
+                    card.className = 'product-card-mobile'; 
+                    card.dataset.productId = product.id;
+                    card.innerHTML = `<div class="name">${product.name}</div><div class="sku">${product.sku}</div>`;
                     card.addEventListener('click', function() {
-                        this.classList.add('card-selected-animation');
-                        // Ensure product object passed has all necessary fields for addProductToSelectedList and renderSingleItemDetailCard
-                        const productDataForAdd = {
-                             id: product.id, name: product.name, sku: product.sku,
-                             shelf_life_days: product.shelf_life_days, // Assuming API returns this
-                             standard_cost: product.standard_cost, // Assuming API returns this
-                             barcode: product.barcode
-                        };
-                        addProductToSelectedList(productDataForAdd);
-                        setTimeout(() => {
-                            this.classList.remove('card-selected-animation');
-                        }, 250); 
+                        this.classList.add('card-selected-animation-mobile'); 
+                        toggleProductSelection(product); 
+                        setTimeout(() => { this.classList.remove('card-selected-animation-mobile'); }, 250);
                     });
-                    cardContainer.appendChild(card);
-                    productBrowseGrid.appendChild(cardContainer);
+                    if (selectedProducts.has(product.id)) {
+                        card.classList.add('selected');
+                    }
+                    productBrowseGrid.appendChild(card);
                 });
-            } else {
-                productBrowseGrid.innerHTML = '<p class="text-muted small p-2 col-12">-- ไม่พบสินค้า --</p>';
-            }
-        } catch (error) {
-            console.error("Error loading products for browse:", error);
-            productBrowseGrid.innerHTML = `<p class="text-danger small p-2 col-12">โหลดสินค้าผิดพลาด: ${error.message}</p>`;
-        }
+            } else { productBrowseGrid.innerHTML = '<p class="text-muted small p-2 col-12 text-center" style="grid-column: 1 / -1;">-- ไม่พบสินค้า --</p>'; }
+        } catch (error) { console.error("Error in loadProductsForBrowseGridMobile:", error); productBrowseGrid.innerHTML = `<p class="text-danger small p-2 col-12 text-center" style="grid-column: 1 / -1;">โหลดข้อมูลผิดพลาด: ${error.message}</p>`;}
     }
-    
-    function renderSingleItemDetailCard(product, index) {
-        const templateContent = itemDetailCardTemplate.content.cloneNode(true);
-        const cardElement = templateContent.querySelector('.item-detail-card');
-        cardElement.dataset.productId = product.id;
 
-        cardElement.querySelector('.product-name-display').textContent = product.name;
-        cardElement.querySelector('.product-sku-display').textContent = `(SKU: ${product.sku})`;
+    function renderSingleItemDetailCardMobile(product, index) {
+        if(!itemDetailCardTemplate || !batchItemsDetailsContainer) return;
+        const templateContent = itemDetailCardTemplate.content.cloneNode(true);
+        const cardElement = templateContent.querySelector('.item-detail-card-mobile');
+        if(!cardElement) return;
+
+        cardElement.dataset.productIdMobile = product.id;
+
+        const nameDisplay = cardElement.querySelector('.product-name-display-mobile');
+        if(nameDisplay) nameDisplay.textContent = product.name;
+        const skuDisplay = cardElement.querySelector('.product-sku-display-mobile');
+        if(skuDisplay) skuDisplay.textContent = `(SKU: ${product.sku})`;
         
         cardElement.querySelectorAll('[name^="items[INDEX]"]').forEach(input => {
             input.name = input.name.replace('INDEX', index);
             const fieldNameMatch = input.name.match(/\[([^\][]*)]$/); 
             if (fieldNameMatch && fieldNameMatch[1]) {
-                 input.id = `item_${index}_${fieldNameMatch[1]}`;
-                 const label = cardElement.querySelector(`label[for="item_INDEX_${fieldNameMatch[1]}"]`);
+                 input.id = `item_${index}_${fieldNameMatch[1]}_mobile`;
+                 const label = cardElement.querySelector(`label[for="item_INDEX_${fieldNameMatch[1]}_mobile"]`);
                  if (label) label.htmlFor = input.id;
             }
         });
         
-        cardElement.querySelector('.item-product-id').value = product.id;
+        const prodIdInput = cardElement.querySelector('.item-product-id-mobile');
+        if(prodIdInput) prodIdInput.value = product.id;
         
-        const shelfLifeHiddenInput = cardElement.querySelector('.item-shelf-life');
+        const shelfLifeHiddenInput = cardElement.querySelector('.item-shelf-life-mobile');
         const shelfLifeDays = (product.shelf_life_days !== null && product.shelf_life_days !== undefined) ? product.shelf_life_days : '';
-        shelfLifeHiddenInput.value = shelfLifeDays;
-        cardElement.querySelector('.item-shelf-life-display').textContent = `อายุ: ${shelfLifeDays !== '' ? shelfLifeDays + ' วัน' : 'ไม่ระบุ'}`;
+        if(shelfLifeHiddenInput) shelfLifeHiddenInput.value = shelfLifeDays;
         
-        // Cost related elements are removed from template.
-        // const standardCostHiddenInput = cardElement.querySelector('.item-standard-cost');
-        // if(standardCostHiddenInput) standardCostHiddenInput.value = (product.standard_cost !== null && product.standard_cost !== undefined) ? parseFloat(product.standard_cost).toFixed(2) : '';
-        
-        const prodDateGroup = cardElement.querySelector('.item-production-date-group');
-        const expDateGroup = cardElement.querySelector('.item-expiry-date-group');
-        const prodDateInput = cardElement.querySelector('.item-production-date');
-        const expDateInput = cardElement.querySelector('.item-expiry-date');
+        const shelfLifeDisplayElements = cardElement.querySelectorAll('.item-shelf-life-display-mobile');
+        shelfLifeDisplayElements.forEach(el => {
+            el.textContent = `อายุ: ${shelfLifeDays !== '' ? shelfLifeDays + ' วัน' : 'ไม่ระบุ'}`;
+        });
+                
+        const prodDateGroup = cardElement.querySelector('.item-production-date-group-mobile');
+        const expDateGroup = cardElement.querySelector('.item-expiry-date-group-mobile');
+        const prodDateInput = cardElement.querySelector('.item-production-date-mobile');
+        const expDateInput = cardElement.querySelector('.item-expiry-date-mobile');
         const calcExpDisplay = cardElement.querySelector('.calculated-expiry-text');
 
         function toggleDatesForItem() {
-            const slDaysVal = shelfLifeHiddenInput.value;
+            if(!prodDateInput || !expDateInput || !prodDateGroup || !expDateGroup) return;
+
+            const slDaysVal = shelfLifeHiddenInput ? shelfLifeHiddenInput.value : '';
             const slDays = slDaysVal !== '' && !isNaN(parseInt(slDaysVal, 10)) ? parseInt(slDaysVal, 10) : null;
-            prodDateInput.required = false;
+            
+            prodDateInput.required = false; 
             expDateInput.required = false;
-            if (slDays !== null && slDays >= 0) {
-                prodDateGroup.classList.remove('hidden');
+            
+            const useDirectExpiry = toggleExpiryInputAllSwitch ? toggleExpiryInputAllSwitch.checked : false;
+
+            if (useDirectExpiry) {
+                prodDateGroup.classList.add('hidden'); 
+                expDateGroup.classList.remove('hidden');
+                prodDateInput.value = ''; 
+            } else if (slDays !== null && slDays >= 0) { 
+                prodDateGroup.classList.remove('hidden'); 
                 expDateGroup.classList.add('hidden');
                 expDateInput.value = ''; 
                 prodDateInput.required = true;
-            } else {
-                prodDateGroup.classList.add('hidden');
+            } else { 
+                prodDateGroup.classList.add('hidden'); 
                 expDateGroup.classList.remove('hidden');
                 prodDateInput.value = ''; 
             }
         }
-        
         function calculateExpiryForItem() {
+            if(!calcExpDisplay || !prodDateInput || !shelfLifeHiddenInput) return;
+            
             const slDaysVal = shelfLifeHiddenInput.value;
             const slDays = slDaysVal !== '' && !isNaN(parseInt(slDaysVal, 10)) ? parseInt(slDaysVal, 10) : null;
-            const prodDateStr = prodDateInput.value;
+            const prodDateStr = prodDateInput.value; 
             calcExpDisplay.textContent = '';
+
             if (slDays !== null && slDays >= 0 && prodDateStr) {
                  try {
                     const dateParts = prodDateStr.split('-');
@@ -531,83 +617,88 @@ document.addEventListener('DOMContentLoaded', function() {
                         jsDate.setUTCDate(jsDate.getUTCDate() + slDays);
                         calcExpDisplay.textContent = `~หมดอายุ: ${jsDate.toISOString().split('T')[0]}`;
                     } else { calcExpDisplay.textContent = 'รูปแบบวันผลิตไม่ถูกต้อง'; }
-                } catch(e) { console.error(e); calcExpDisplay.textContent = 'คำนวณผิดพลาด';}
+                } catch(e) { calcExpDisplay.textContent = 'คำนวณผิดพลาด';}
             }
         }
+        toggleDatesForItem(); 
+        if(prodDateInput) {
+            prodDateInput.addEventListener('change', calculateExpiryForItem);
+            prodDateInput.addEventListener('input', calculateExpiryForItem);
+        }
+        if(toggleExpiryInputAllSwitch) toggleExpiryInputAllSwitch.addEventListener('change', toggleDatesForItem);
 
-        toggleDatesForItem();
-        prodDateInput.addEventListener('change', calculateExpiryForItem);
-        prodDateInput.addEventListener('input', calculateExpiryForItem);
-        
         batchItemsDetailsContainer.appendChild(cardElement);
     }
 
-    function renderAllDetailForms() {
+    function renderAllDetailFormsMobile() {
+        if(!batchItemsDetailsContainer || !detailsPlaceholder) return;
         batchItemsDetailsContainer.innerHTML = ''; 
         itemDetailIndexCounter = 0; 
         if (selectedProducts.size > 0) {
             detailsPlaceholder.classList.add('hidden');
-            selectedProducts.forEach(product => { // product here is from selectedProducts map
-                renderSingleItemDetailCard(product, itemDetailIndexCounter++);
+            selectedProducts.forEach(product => {
+                renderSingleItemDetailCardMobile(product, itemDetailIndexCounter++);
             });
             detailFormRendered = true;
         } else {
             detailsPlaceholder.classList.remove('hidden');
             detailFormRendered = false;
         }
-        updateReviewButtonState();
+        updateButtonStates();
     }
 
-    if(toggleExpiryInputAllSwitch) {
+    if(productSearchInput) productSearchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { e.preventDefault(); fetchProductForSelectionMobile(this.value.trim()); }});
+    if(categorySelect) categorySelect.addEventListener('change', function() { loadProductsForBrowseGridMobile(this.value, null); if(productSearchInput) productSearchInput.value = ''; if(productSearchError) productSearchError.textContent = '';});
+    if(locationIdBatchSelect) locationIdBatchSelect.addEventListener('change', updateButtonStates);
+    
+    if(toggleExpiryInputAllSwitch) { 
         toggleExpiryInputAllSwitch.addEventListener('change', function() {
-            batchDefaultExpiryDateRow.classList.toggle('hidden', !this.checked);
-            if (!this.checked) batchDefaultExpDateInput.value = '';
+            if(batchDefaultExpiryDateRow) batchDefaultExpiryDateRow.classList.toggle('hidden', !this.checked);
+            if (!this.checked && batchDefaultExpDateInput) {
+                batchDefaultExpDateInput.value = ''; 
+            }
+            if (detailFormRendered) {
+                renderAllDetailFormsMobile(); 
+            }
         });
-    }
-
-    if (applyProdDateAllBtn) {
+     }
+    if (applyProdDateAllBtn && batchDefaultProdDateInput && batchItemsDetailsContainer) { 
         applyProdDateAllBtn.addEventListener('click', function() {
             const defaultProdDate = batchDefaultProdDateInput.value;
             if (!defaultProdDate) { alert('กรุณาเลือกวันผลิตเริ่มต้น'); return; }
             if (!detailFormRendered) { alert('กรุณากด "กรอกรายละเอียด" เพื่อแสดงฟอร์มของสินค้าก่อน'); return; }
-            batchItemsDetailsContainer.querySelectorAll('.item-detail-card').forEach(card => {
-                const prodDateInput = card.querySelector('.item-production-date');
-                const prodDateGroup = card.querySelector('.item-production-date-group');
-                if (!prodDateGroup.classList.contains('hidden')) {
+            batchItemsDetailsContainer.querySelectorAll('.item-detail-card-mobile').forEach(card => {
+                const prodDateInput = card.querySelector('.item-production-date-mobile');
+                const prodDateGroup = card.querySelector('.item-production-date-group-mobile');
+                if (prodDateInput && prodDateGroup && !prodDateGroup.classList.contains('hidden')) { 
                     prodDateInput.value = defaultProdDate;
-                    prodDateInput.dispatchEvent(new Event('input')); // Use 'input' for wider compatibility
+                    prodDateInput.dispatchEvent(new Event('input')); 
                 }
             });
         });
     }
-
-    if (applyExpDateAllBtn) {
+    if (applyExpDateAllBtn && batchDefaultExpDateInput && batchItemsDetailsContainer && toggleExpiryInputAllSwitch) { 
         applyExpDateAllBtn.addEventListener('click', function() {
             const defaultExpDate = batchDefaultExpDateInput.value;
             if (!defaultExpDate) { alert('กรุณาเลือกวันหมดอายุเริ่มต้น'); return; }
             if (!detailFormRendered) { alert('กรุณากด "กรอกรายละเอียด" เพื่อแสดงฟอร์มของสินค้าก่อน'); return; }
             if (!toggleExpiryInputAllSwitch.checked) { alert('กรุณาเปิด "กรอกวันหมดอายุตรง" ก่อนใช้ปุ่มนี้'); return;}
-            batchItemsDetailsContainer.querySelectorAll('.item-detail-card').forEach(card => {
-                const expDateInput = card.querySelector('.item-expiry-date');
-                const expDateGroup = card.querySelector('.item-expiry-date-group');
-                if (!expDateGroup.classList.contains('hidden')) {
+            batchItemsDetailsContainer.querySelectorAll('.item-detail-card-mobile').forEach(card => {
+                const expDateInput = card.querySelector('.item-expiry-date-mobile');
+                const expDateGroup = card.querySelector('.item-expiry-date-group-mobile');
+                if (expDateInput && expDateGroup && !expDateGroup.classList.contains('hidden')) { 
                     expDateInput.value = defaultExpDate;
                 }
             });
         });
-    }
+     }
     
-    productSearchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { e.preventDefault(); fetchProductForSelection(this.value.trim()); }});
-    productSearchBtn.addEventListener('click', function() { fetchProductForSelection(productSearchInput.value.trim()); });
-    categorySelect.addEventListener('change', function() { loadProductsForBrowseGrid(this.value, null); productSearchInput.value = ''; productSearchError.textContent = '';});
-    proceedToDetailsBtn.addEventListener('click', renderAllDetailForms);
-    locationIdBatchSelect.addEventListener('change', updateReviewButtonState);
-    batchStockInForm.addEventListener('submit', function(event) { /* ... (validation from previous code block) ... */
+    if(batchStockInForm) batchStockInForm.addEventListener('submit', function(event) { 
         if (selectedProducts.size === 0) {
             alert('ไม่มีสินค้าในรายการ กรุณาเลือกสินค้าก่อน');
             event.preventDefault(); return;
         }
-        if (!locationIdBatchSelect.value) {
+        if (locationIdBatchSelect && !locationIdBatchSelect.value) {
             alert('กรุณาเลือกสถานที่จัดเก็บสำหรับ Batch นี้');
             locationIdBatchSelect.focus();
             event.preventDefault(); return;
@@ -617,50 +708,159 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault(); return;
         }
         let allValid = true;
-        batchItemsDetailsContainer.querySelectorAll('.item-detail-card').forEach((cardElement) => {
-            // Find the index based on its position or a data attribute if you set one during render
-            const itemProductId = cardElement.dataset.productId;
-            // Reconstruct the id prefix used for inputs of this card
-            // This requires knowing the index used when the card was rendered.
-            // A better way: querySelectorAll for item-quantity within this cardElement context.
-            const qtyInput = cardElement.querySelector('.item-quantity'); // More specific selector
+        if(batchItemsDetailsContainer) batchItemsDetailsContainer.querySelectorAll('.item-detail-card-mobile').forEach((cardElement) => {
+            const qtyInput = cardElement.querySelector('.item-quantity-mobile'); 
             if (qtyInput && (!qtyInput.value || parseFloat(qtyInput.value) <= 0)) {
-                allValid = false;
-                qtyInput.classList.add('is-invalid');
-            } else if(qtyInput) {
-                qtyInput.classList.remove('is-invalid');
-            }
+                allValid = false; qtyInput.classList.add('is-invalid');
+            } else if(qtyInput) { qtyInput.classList.remove('is-invalid'); }
 
-            const prodDateInput = cardElement.querySelector('.item-production-date');
-            const prodDateGroup = cardElement.querySelector('.item-production-date-group');
-            if (!prodDateGroup.classList.contains('hidden') && prodDateInput.required && !prodDateInput.value) {
-                 allValid = false;
-                 prodDateInput.classList.add('is-invalid');
-                 // alert(`กรุณากรอกวันผลิตสำหรับสินค้า: ${cardElement.querySelector('.product-name-display').textContent}`);
-            } else if (prodDateInput) {
-                prodDateInput.classList.remove('is-invalid');
-            }
+            const prodDateInput = cardElement.querySelector('.item-production-date-mobile');
+            const prodDateGroup = cardElement.querySelector('.item-production-date-group-mobile');
+            if (prodDateInput && prodDateGroup && !prodDateGroup.classList.contains('hidden') && prodDateInput.required && !prodDateInput.value) {
+                 allValid = false; prodDateInput.classList.add('is-invalid');
+            } else if (prodDateInput) { prodDateInput.classList.remove('is-invalid');}
 
-            const expDateInput = cardElement.querySelector('.item-expiry-date');
-            const expDateGroup = cardElement.querySelector('.item-expiry-date-group');
-             if (!expDateGroup.classList.contains('hidden') && expDateInput.required && !expDateInput.value) {
-                 allValid = false;
-                 expDateInput.classList.add('is-invalid');
-                 // alert(`กรุณากรอกวันหมดอายุสำหรับสินค้า: ${cardElement.querySelector('.product-name-display').textContent}`);
-            } else if (expDateInput) {
-                expDateInput.classList.remove('is-invalid');
-            }
+            const expDateInput = cardElement.querySelector('.item-expiry-date-mobile');
+            const expDateGroup = cardElement.querySelector('.item-expiry-date-group-mobile');
+             if (expDateInput && expDateGroup && !expDateGroup.classList.contains('hidden') && expDateInput.required && !expDateInput.value) {
+                 allValid = false; expDateInput.classList.add('is-invalid');
+            } else if (expDateInput) { expDateInput.classList.remove('is-invalid'); }
         });
         if (!allValid) {
             alert('กรุณากรอกข้อมูลที่จำเป็น (จำนวน, วันที่) ให้ครบถ้วนและถูกต้องสำหรับสินค้าทุกรายการ');
             event.preventDefault(); return;
         }
     });
-    
-    updateProceedButton();
-    loadProductsForBrowseGrid(categorySelect.value); 
-    const formDataRawScript = document.getElementById('form_data_raw_script');
-    if (formDataRawScript) { /* ... (logic for repopulating from raw form data - needs careful implementation if required) ... */ }
+        
+    updateButtonStates();
+    if(categorySelect) loadProductsForBrowseGridMobile(categorySelect.value); 
+    showPhase(1); 
+    if(phase2Col) window.addEventListener('resize', () => showPhase( isMobileView() && phase2Col.style.display === 'block' ? 2 : 1 ));
+
+    const formDataRawScript = document.getElementById('form_data_raw_script_mobile');
+    if (formDataRawScript && formDataRawScript.textContent) { 
+        try {
+            const rawData = JSON.parse(formDataRawScript.textContent);
+            if (locationIdBatchSelect && rawData.location_id) {
+                locationIdBatchSelect.value = rawData.location_id;
+            }
+            const batchNotesMobileEl = document.getElementById('batch_notes_mobile');
+            if (batchNotesMobileEl && rawData.batch_notes) {
+                batchNotesMobileEl.value = rawData.batch_notes;
+            }
+            if (Array.isArray(rawData.items)) {
+                rawData.items.forEach(item => {
+                    if(item.product_id && !selectedProducts.has(parseInt(item.product_id))){ 
+                         selectedProducts.set(parseInt(item.product_id), { 
+                             id: parseInt(item.product_id), 
+                             name: item.product_name || `Product ${item.product_id}`, 
+                             sku: item.product_sku || `SKU-${item.product_id}`,
+                             shelf_life_days: item.shelf_life_days !== undefined ? item.shelf_life_days : null,
+                            });
+                    }
+                });
+                
+                if(selectedProductsListEl && noSelectedItemsPlaceholder){
+                    selectedProductsListEl.innerHTML = ''; 
+                    if (selectedProducts.size > 0) noSelectedItemsPlaceholder.classList.add('hidden');
+                    else noSelectedItemsPlaceholder.classList.remove('hidden');
+
+                    selectedProducts.forEach(p => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        listItem.dataset.productId = p.id;
+                        listItem.innerHTML = `<span class="product-info">${p.name} (SKU: ${p.sku})</span>
+                                              <button type="button" class="btn btn-danger btn-sm remove-item-btn"><i class="bi bi-x-lg"></i></button>`;
+                        listItem.querySelector('.remove-item-btn').onclick = function() {
+                            const productId = parseInt(listItem.dataset.productId);
+                            selectedProducts.delete(productId);
+                            listItem.remove();
+                            if(productBrowseGrid){ 
+                                const cardInGrid = productBrowseGrid.querySelector(`.product-card-mobile[data-product-id="${productId}"]`);
+                                if(cardInGrid) cardInGrid.classList.remove('selected');
+                            }
+                            if(batchItemsDetailsContainer){
+                                const detailCard = batchItemsDetailsContainer.querySelector(`.item-detail-card-mobile[data-product-id-mobile="${productId}"]`);
+                                if (detailCard) detailCard.remove();
+                            }
+                            updateButtonStates();
+                            if (selectedProducts.size === 0 && detailFormRendered && detailsPlaceholder) {
+                                detailsPlaceholder.classList.remove('hidden');
+                                if (isMobileView()) showPhase(1); 
+                            }
+                        };
+                        selectedProductsListEl.appendChild(listItem);
+                    });
+                }
+                
+                if (productBrowseGrid && productBrowseGrid.childElementCount > 0) {
+                    productBrowseGrid.querySelectorAll('.product-card-mobile').forEach(card => {
+                        const cardProductId = parseInt(card.dataset.productId);
+                        if (selectedProducts.has(cardProductId)) {
+                            card.classList.add('selected');
+                        } else {
+                            card.classList.remove('selected');
+                        }
+                    });
+                }
+
+
+                updateButtonStates(); 
+
+                if (selectedProducts.size > 0) {
+                    renderAllDetailFormsMobile(); 
+                    
+                    let currentItemIndex = 0; 
+                    selectedProducts.forEach(productFromMap => {
+                         const itemFromRawData = rawData.items.find(itRaw => parseInt(itRaw.product_id) === productFromMap.id);
+                         if (itemFromRawData && batchItemsDetailsContainer) {
+                            const card = batchItemsDetailsContainer.querySelector(`.item-detail-card-mobile[data-product-id-mobile="${productFromMap.id}"]`);
+                            if (card) {
+                                const qtyInput = card.querySelector(`input[name="items[${currentItemIndex}][quantity]"]`);
+                                if (qtyInput && itemFromRawData.quantity) qtyInput.value = itemFromRawData.quantity;
+                                
+                                const costInput = card.querySelector(`input[name="items[${currentItemIndex}][cost_per_unit]"]`);
+                                if (costInput && itemFromRawData.cost_per_unit) costInput.value = itemFromRawData.cost_per_unit;
+
+                                const prodDateInput = card.querySelector(`input[name="items[${currentItemIndex}][production_date]"]`);
+                                const expDateInput = card.querySelector(`input[name="items[${currentItemIndex}][expiry_date]"]`);
+                                const prodDateGroup = card.querySelector('.item-production-date-group-mobile');
+                                
+                                if (prodDateInput && prodDateGroup && itemFromRawData.production_date && !prodDateGroup.classList.contains('hidden')) {
+                                    prodDateInput.value = itemFromRawData.production_date;
+                                    prodDateInput.dispatchEvent(new Event('input')); 
+                                }
+                                if (expDateInput && itemFromRawData.expiry_date ) {
+                                     const shelfLifeVal = card.querySelector('.item-shelf-life-mobile') ? card.querySelector('.item-shelf-life-mobile').value : '';
+                                     const isDirectExpiryMode = toggleExpiryInputAllSwitch ? toggleExpiryInputAllSwitch.checked : false;
+                                     const hasShelfLife = shelfLifeVal !== '' && !isNaN(parseInt(shelfLifeVal, 10)) && parseInt(shelfLifeVal, 10) >=0;
+                                     const expDateGroup = card.querySelector('.item-expiry-date-group-mobile');
+
+                                     if(expDateGroup && (isDirectExpiryMode || !hasShelfLife)){ 
+                                        if(!expDateGroup.classList.contains('hidden')){
+                                            expDateInput.value = itemFromRawData.expiry_date;
+                                        }
+                                     }
+                                }
+                            }
+                         }
+                         currentItemIndex++;
+                    });
+
+                     detailFormRendered = true; 
+                     if(isMobileView() && selectedProducts.size > 0){ 
+                         showPhase(2); 
+                     } else {
+                         showPhase(1); 
+                     }
+                }
+            }
+            updateButtonStates(); 
+
+        } catch(e) {
+            console.error("Error repopulating form from session data:", e);
+        }
+    }
 
 });
 </script>
