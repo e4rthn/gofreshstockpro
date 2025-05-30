@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '0fd2767ace7a'  # <<< ใส่ Revision ID ของไฟล์นี้ (ต้องตรงกับด้านบน)
-down_revision: Union[str, None] = 'dfdc6de8397a' # <<< !!! สำคัญ: ใส่ Revision ID ของ HEAD ก่อนหน้าไฟล์นี้ !!!
+down_revision: Union[str, None] = '61dd061cd3ff' # <<< !!! สำคัญ: ใส่ Revision ID ของ HEAD ก่อนหน้าไฟล์นี้ !!!
 
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
